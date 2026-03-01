@@ -14,7 +14,6 @@ enum ApiErrorType {
   unknown,
 }
 
-
 /// Custom exception for all API errors with user-friendly messages
 class ApiException implements Exception {
   final ApiErrorType type;
