@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/storage/storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes.dart';
@@ -36,8 +38,20 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
       CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
     );
 
-    _controller.forward().whenComplete(() {
-      Navigator.pushReplacementNamed(context, Routes.onboarding);
+    _controller.forward().whenComplete(() async {
+      final storageService = context.read<StorageService>();
+      final isOnboardingComplete = await storageService.isOnboardingComplete();
+      final isLoggedIn = await storageService.isLoggedIn();
+
+      if (mounted) {
+        if (isLoggedIn) {
+          Navigator.pushReplacementNamed(context, Routes.dashboard);
+        } else if (isOnboardingComplete) {
+          Navigator.pushReplacementNamed(context, Routes.auth);
+        } else {
+          Navigator.pushReplacementNamed(context, Routes.onboarding);
+        }
+      }
     });
   }
 

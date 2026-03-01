@@ -46,14 +46,21 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       return;
     }
 
-    final success = await context.read<AuthViewModel>().verifyOtp(otp);
+    final viewModel = context.read<AuthViewModel>();
+    final success = await viewModel.verifyOtp(otp);
     if (success && mounted) {
+      if (viewModel.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(viewModel.successMessage!),
+          backgroundColor: Colors.green,
+        ));
+      }
       Navigator.pushNamedAndRemoveUntil(context, Routes.dashboard, (route) => false);
     } else if (mounted) {
-      final error = context.read<AuthViewModel>().error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? 'Verification failed')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(viewModel.error ?? 'Verification failed'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 

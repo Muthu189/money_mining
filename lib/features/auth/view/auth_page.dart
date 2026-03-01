@@ -61,12 +61,21 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-    final success = await context.read<AuthViewModel>().login(email: email, password: password);
+    final viewModel = context.read<AuthViewModel>();
+    final success = await viewModel.login(email: email, password: password);
     if (success && mounted) {
+      if (viewModel.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(viewModel.successMessage!),
+          backgroundColor: Colors.green,
+        ));
+      }
       Navigator.pushNamed(context, Routes.otpVerification);
     } else if (mounted) {
-      final error = context.read<AuthViewModel>().error;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Login failed')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(viewModel.error ?? 'Login failed'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
@@ -89,7 +98,8 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-    final success = await context.read<AuthViewModel>().createAccount(
+    final viewModel = context.read<AuthViewModel>();
+    final success = await viewModel.createAccount(
       username: username,
       email: email,
       mobile: mobile,
@@ -99,13 +109,18 @@ class _AuthPageState extends State<AuthPage> {
     );
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account Created! Please Login.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(viewModel.successMessage ?? 'Account Created! Please Login.'),
+        backgroundColor: Colors.green,
+      ));
       setState(() {
         _isLogin = true;
       });
     } else if (mounted) {
-      final error = context.read<AuthViewModel>().error;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Signup failed')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(viewModel.error ?? 'Signup failed'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
@@ -116,10 +131,10 @@ class _AuthPageState extends State<AuthPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back_ios, size: 20),
+        //   onPressed: () => Navigator.of(context).pop(),
+        // ),
         title: const Text('MONEYMINING'),
         actions: [
            IconButton(
@@ -294,11 +309,25 @@ class _AuthPageState extends State<AuthPage> {
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: viewModel.isLoading ? null : () {
+                  onPressed: viewModel.isLoading ? null : () async {
                     final email = _signupEmailController.text.trim();
                     if (email.isNotEmpty) {
-                       context.read<AuthViewModel>().sendEmailOtp(email);
-                       setState(() => _showEmailOtp = true);
+                       final vm = context.read<AuthViewModel>();
+                       final success = await vm.sendEmailOtp(email);
+                       if (mounted) {
+                         if (success) {
+                           setState(() => _showEmailOtp = true);
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                             content: Text(vm.successMessage ?? 'Email OTP sent!'),
+                             backgroundColor: Colors.green,
+                           ));
+                         } else {
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                             content: Text(vm.error ?? 'Failed to send OTP'),
+                             backgroundColor: Colors.red,
+                           ));
+                         }
+                       }
                     } else {
                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter email')));
                     }
@@ -347,9 +376,16 @@ class _AuthPageState extends State<AuthPage> {
                SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: viewModel.isLoading ? null : () {
+                  onPressed: viewModel.isLoading ? null : () async {
                      final otp = _emailOtpController.text.trim();
-                     context.read<AuthViewModel>().verifyEmailOtp(_signupEmailController.text.trim(), otp);
+                     final vm = context.read<AuthViewModel>();
+                     final success = await vm.verifyEmailOtp(_signupEmailController.text.trim(), otp);
+                     if (mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                         content: Text(success ? (vm.successMessage ?? 'Email verified!') : (vm.error ?? 'Invalid OTP')),
+                         backgroundColor: success ? Colors.green : Colors.red,
+                       ));
+                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.successGreen),
                   child: const Text('Submit', style: TextStyle(color: Colors.white)),
@@ -382,11 +418,25 @@ class _AuthPageState extends State<AuthPage> {
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: viewModel.isLoading ? null : () {
+                  onPressed: viewModel.isLoading ? null : () async {
                     final mobile = _signupPhoneController.text.trim();
                     if (mobile.isNotEmpty) {
-                       context.read<AuthViewModel>().sendMobileOtp(mobile);
-                       setState(() => _showPhoneOtp = true);
+                       final vm = context.read<AuthViewModel>();
+                       final success = await vm.sendMobileOtp(mobile);
+                       if (mounted) {
+                         if (success) {
+                           setState(() => _showPhoneOtp = true);
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                             content: Text(vm.successMessage ?? 'Mobile OTP sent!'),
+                             backgroundColor: Colors.green,
+                           ));
+                         } else {
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                             content: Text(vm.error ?? 'Failed to send OTP'),
+                             backgroundColor: Colors.red,
+                           ));
+                         }
+                       }
                     } else {
                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter mobile number')));
                     }
@@ -421,9 +471,16 @@ class _AuthPageState extends State<AuthPage> {
                SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: viewModel.isLoading ? null : () {
+                  onPressed: viewModel.isLoading ? null : () async {
                      final otp = _mobileOtpController.text.trim();
-                     context.read<AuthViewModel>().verifyMobileOtp(_signupPhoneController.text.trim(), otp);
+                     final vm = context.read<AuthViewModel>();
+                     final success = await vm.verifyMobileOtp(_signupPhoneController.text.trim(), otp);
+                     if (mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                         content: Text(success ? (vm.successMessage ?? 'Mobile verified!') : (vm.error ?? 'Invalid OTP')),
+                         backgroundColor: success ? Colors.green : Colors.red,
+                       ));
+                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.successGreen),
                   child: const Text('Submit', style: TextStyle(color: Colors.white)),

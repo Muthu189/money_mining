@@ -169,8 +169,20 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
                  );
                  
                  if (!identitySuccess) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(viewModel.error ?? 'Identity Upload Failed')));
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(viewModel.error ?? 'Identity Upload Failed'),
+                        backgroundColor: Colors.red,
+                      ));
+                    }
                     return;
+                 }
+
+                 if (mounted && viewModel.successMessage != null) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                     content: Text(viewModel.successMessage!),
+                     backgroundColor: Colors.green,
+                   ));
                  }
                  
                  // 2. Submit Bank
@@ -180,9 +192,19 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
                  );
 
                  if (bankSuccess) {
-                   if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('KYC Submitted Successfully!')));
+                   if (mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                       content: Text(viewModel.successMessage ?? 'KYC Submitted Successfully!'),
+                       backgroundColor: Colors.green,
+                     ));
+                   }
                  } else {
-                   if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(viewModel.error ?? 'Bank Details Upload Failed')));
+                   if (mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                       content: Text(viewModel.error ?? 'Bank Details Upload Failed'),
+                       backgroundColor: Colors.red,
+                     ));
+                   }
                  }
               },
             ),

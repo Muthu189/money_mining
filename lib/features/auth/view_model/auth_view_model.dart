@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
+import '../../../core/api/api_exception.dart';
 import '../data/auth_repository.dart';
 
 class AuthViewModel extends ChangeNotifier {
@@ -7,10 +7,12 @@ class AuthViewModel extends ChangeNotifier {
   
   bool _isLoading = false;
   String? _error;
+  String? _successMessage;
   String? _tempToken; // Token received from login to be used for OTP
 
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get successMessage => _successMessage;
   String? get tempToken => _tempToken;
 
   AuthViewModel(this._authRepository);
@@ -25,7 +27,13 @@ class AuthViewModel extends ChangeNotifier {
   bool get emailOtpSent => _emailOtpSent;
   bool get mobileOtpSent => _mobileOtpSent;
 
-  // New: Registration with OTPs
+  /// Clear messages after they've been shown
+  void clearMessages() {
+    _error = null;
+    _successMessage = null;
+  }
+
+  // Registration with OTPs
   Future<bool> createAccount({
     required String username,
     required String email,
@@ -36,8 +44,9 @@ class AuthViewModel extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.createAccount(
+      final response = await _authRepository.createAccount(
         username: username,
         email: email,
         mobile: mobile,
@@ -45,14 +54,15 @@ class AuthViewModel extends ChangeNotifier {
         mailOtp: mailOtp,
         mobOtp: mobOtp,
       );
+      _successMessage = response.message.isNotEmpty ? response.message : 'Account created successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Signup failed. Please check OTPs.';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
@@ -61,17 +71,19 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> sendEmailOtp(String email) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.sendEmailOtp(email);
+      final response = await _authRepository.sendEmailOtp(email);
       _emailOtpSent = true;
+      _successMessage = response.message.isNotEmpty ? response.message : 'Email OTP sent successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Failed to send Email OTP';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
@@ -80,17 +92,19 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> sendMobileOtp(String mobile) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.sendMobileOtp(mobile);
+      final response = await _authRepository.sendMobileOtp(mobile);
       _mobileOtpSent = true;
+      _successMessage = response.message.isNotEmpty ? response.message : 'Mobile OTP sent successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Failed to send Mobile OTP';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
@@ -99,17 +113,19 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> verifyEmailOtp(String email, String otp) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.verifyEmailOtp(email, otp);
+      final response = await _authRepository.verifyEmailOtp(email, otp);
       _isEmailVerified = true;
+      _successMessage = response.message.isNotEmpty ? response.message : 'Email verified successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Invalid Email OTP';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
@@ -118,68 +134,80 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> verifyMobileOtp(String mobile, String otp) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.verifyMobileOtp(mobile, otp);
+      final response = await _authRepository.verifyMobileOtp(mobile, otp);
       _isMobileVerified = true;
+      _successMessage = response.message.isNotEmpty ? response.message : 'Mobile verified successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Invalid Mobile OTP';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
   }
 
-  // Existing Login Logic
+  // Login
   Future<bool> login({
     required String email,
     required String password,
   }) async {
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      final token = await _authRepository.login(email: email, password: password);
-      _tempToken = token;
+      final response = await _authRepository.login(email: email, password: password);
+      // Extract token from data
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        _tempToken = data['token']?.toString() ?? '';
+      } else {
+        _tempToken = '';
+      }
+      _successMessage = response.message.isNotEmpty ? response.message : 'Login successful!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Login failed';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
   }
 
-  // Existing OTP Verification for Login (2FA)
+  // OTP Verification for Login (2FA)
   Future<bool> verifyLoginOtp(String otp) async {
-      return verifyOtp(otp);
+    return verifyOtp(otp);
   }
 
   Future<bool> verifyOtp(String otp) async {
-     // ... existing implementation
     if (_tempToken == null) {
       _error = "Session expired. Please login again.";
+      notifyListeners();
       return false;
     }
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
-      await _authRepository.verifyOtp(token: _tempToken!, otp: otp);
+      final response = await _authRepository.verifyOtp(token: _tempToken!, otp: otp);
+      _successMessage = response.message.isNotEmpty ? response.message : 'OTP verified successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Invalid OTP';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }

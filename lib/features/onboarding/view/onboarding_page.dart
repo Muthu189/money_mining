@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/storage/storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -110,20 +112,25 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         return Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Placeholder for specific themed image if we had them, 
-                            // for now just using text and consistent styling.
-                            // Ideally, we'd render the specific 'bg' image or an icon here.
+                            // Display the themed image
                             Container(
-                              height: 200,
-                              width: 200,
+                              height: 240,
+                              width: double.infinity,
+                              margin: const EdgeInsets.symmetric(horizontal: 20),
                               decoration: BoxDecoration(
-                                color: AppColors.luxuryGold.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
+                                color: AppColors.luxuryGold.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: AppColors.luxuryGold.withValues(alpha: 0.1),
+                                  width: 1,
+                                ),
                               ),
-                              child: Icon(
-                                _getIconForPage(index),
-                                size: 80,
-                                color: AppColors.luxuryGold,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: Image.asset(
+                                  _onboardingData[index]['bg']!,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 48),
@@ -170,14 +177,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   GradientButton(
                     text: _currentPage == _onboardingData.length - 1 ? 'GET STARTED' : 'NEXT',
                     icon: Icons.arrow_forward,
-                    onPressed: () {
+                    onPressed: () async {
                       if (_currentPage < _onboardingData.length - 1) {
                          _pageController.nextPage(
                            duration: const Duration(milliseconds: 300),
                            curve: Curves.easeInOut,
                          );
                       } else {
-                        Navigator.pushReplacementNamed(context, Routes.auth);
+                        // Mark onboarding as complete before navigating
+                        final storageService = context.read<StorageService>();
+                        await storageService.setOnboardingComplete();
+                        
+                        if (context.mounted) {
+                          Navigator.pushReplacementNamed(context, Routes.auth);
+                        }
                       }
                     },
                   ),
@@ -191,13 +204,4 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  IconData _getIconForPage(int index) {
-    switch (index) {
-      case 0: return Icons.trending_up; // Earn
-      case 1: return Icons.card_giftcard; // Refer
-      case 2: return Icons.account_balance_wallet; // Withdraw
-      case 3: return Icons.support_agent; // Support
-      default: return Icons.star;
-    }
-  }
 }

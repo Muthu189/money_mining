@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../storage/storage_service.dart';
 import 'api_config.dart';
+import 'api_exception.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -48,7 +49,17 @@ class ApiClient {
           print('Message: ${e.message}');
           print('Data: ${e.response?.data}');
         }
-        return handler.next(e);
+        // Convert to typed ApiException for consistent error handling
+        final apiException = ApiException.fromDioException(e);
+        return handler.reject(
+          DioException(
+            requestOptions: e.requestOptions,
+            response: e.response,
+            type: e.type,
+            error: apiException,
+            message: apiException.message,
+          ),
+        );
       },
     ));
   }

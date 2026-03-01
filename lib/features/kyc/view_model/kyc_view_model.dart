@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/api/api_exception.dart';
 import '../data/kyc_repository.dart';
 
 class KycViewModel extends ChangeNotifier {
@@ -9,6 +9,7 @@ class KycViewModel extends ChangeNotifier {
   
   bool _isLoading = false;
   String? _error;
+  String? _successMessage;
   
   // KYC Files
   File? _aadhaarFront;
@@ -22,6 +23,7 @@ class KycViewModel extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get successMessage => _successMessage;
   
   File? get aadhaarFront => _aadhaarFront;
   File? get aadhaarBack => _aadhaarBack;
@@ -32,6 +34,12 @@ class KycViewModel extends ChangeNotifier {
   Map<String, dynamic>? get kycData => _kycData;
 
   KycViewModel(this._kycRepository);
+
+  /// Clear messages after they've been shown
+  void clearMessages() {
+    _error = null;
+    _successMessage = null;
+  }
 
   Future<void> pickImage(String type) async {
     final picker = ImagePicker();
@@ -61,6 +69,7 @@ class KycViewModel extends ChangeNotifier {
 
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
       // 1. Upload Images
       final aadhaarFrontUrl = await _kycRepository.uploadImage(_aadhaarFront!);
@@ -68,21 +77,22 @@ class KycViewModel extends ChangeNotifier {
       final panUrl = await _kycRepository.uploadImage(_panImage!);
 
       // 2. Submit Data
-      await _kycRepository.uploadKycDetails(
+      final response = await _kycRepository.uploadKycDetails(
         aadhaarNumber: aadhaarNumber,
         aadhaarFrontUrl: aadhaarFrontUrl,
         aadhaarBackUrl: aadhaarBackUrl,
         panNumber: panNumber,
         panUrl: panUrl,
       );
+      _successMessage = response.message.isNotEmpty ? response.message : 'KYC documents uploaded successfully!';
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'KYC Upload Failed';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
@@ -100,49 +110,54 @@ class KycViewModel extends ChangeNotifier {
 
     _setLoading(true);
     _error = null;
+    _successMessage = null;
     try {
       // 1. Upload Image
       final bankImageUrl = await _kycRepository.uploadImage(_bankImage!);
 
       // 2. Submit Data
-      await _kycRepository.addBankDetails(
+      final response = await _kycRepository.addBankDetails(
         accNo: accNo,
         ifscCode: ifscCode,
         bankImageUrl: bankImageUrl,
       );
+      _successMessage = response.message.isNotEmpty ? response.message : 'Bank details submitted successfully!';
       // After success -> status = pending verification
-      _fetchKycStatus(); // Refresh status
       _kycStatus = 'pending';
+      _fetchKycStatus(); // Refresh status
       _setLoading(false);
       return true;
-    } on DioException catch (e) {
-      _error = e.response?.data['message'] ?? 'Bank Details Upload Failed';
+    } on ApiException catch (e) {
+      _error = e.message;
       _setLoading(false);
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Something went wrong. Please try again.';
       _setLoading(false);
       return false;
     }
   }
 
   Future<void> _fetchKycStatus() async {
-      await fetchKycStatus();
+    await fetchKycStatus();
   }
 
   Future<void> fetchKycStatus() async {
     _setLoading(true);
     try {
-      final data = await _kycRepository.getKycStatus();
-      _kycData = data;
-      // Parse status from data. Assuming 'status' field exists.
-      // Adjust based on actual API response structure.
-      if (data['status'] != null) {
-        _kycStatus = data['status'].toString().toLowerCase();
+      final response = await _kycRepository.getKycStatus();
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        _kycData = data;
+        if (data['status'] != null) {
+          _kycStatus = data['status'].toString().toLowerCase();
+        }
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       // If error (e.g. 404 not found), maybe status is 'new'
-      print("Error fetching KYC status: $e");
+      debugPrint("Error fetching KYC status: ${e.message}");
+    } catch (e) {
+      debugPrint("Error fetching KYC status: $e");
     } finally {
       _setLoading(false);
     }
