@@ -135,6 +135,7 @@ class _AuthPageState extends State<AuthPage> {
         //   icon: const Icon(Icons.arrow_back_ios, size: 20),
         //   onPressed: () => Navigator.of(context).pop(),
         // ),
+
         title: const Text('MONEYMINING'),
         actions: [
            IconButton(
