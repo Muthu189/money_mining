@@ -19,6 +19,7 @@ import 'features/legal/view/terms_conditions_page.dart';
 import 'features/auth/view/otp_verification_page.dart';
 
 class Routes {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String auth = '/auth';

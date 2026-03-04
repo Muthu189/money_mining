@@ -17,4 +17,7 @@ class ApiConfig {
   static const String getSingleKycDetail = '/kyc/getSingleKycDetail';
   static const String saveKycAndBankDetails = '/kyc/saveKycAndBankDetails';
   static const String uploadImage = '/upload';
+
+  //profile
+  static const String getUserInfo = '/users/info';
 }

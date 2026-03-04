@@ -7,6 +7,8 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/view_model/auth_view_model.dart';
 import 'features/kyc/data/kyc_repository.dart';
 import 'features/kyc/view_model/kyc_view_model.dart';
+import 'features/profile/data/profile_repository.dart';
+import 'features/profile/view_model/profile_view_model.dart';
 import 'routes.dart';
 
 void main() {
@@ -40,9 +42,17 @@ class MoneyMiningApp extends StatelessWidget {
           create: (context) => KycViewModel(context.read<KycRepository>()),
           update: (_, kycRepository, viewModel) => KycViewModel(kycRepository),
         ),
+        ProxyProvider<ApiClient, ProfileRepository>(
+          update: (_, apiClient, __) => ProfileRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<ProfileRepository, ProfileViewModel>(
+          create: (context) => ProfileViewModel(context.read<ProfileRepository>()),
+          update: (_, profileRepository, viewModel) => ProfileViewModel(profileRepository),
+        ),
       ],
       child: MaterialApp(
         title: 'MoneyMining',
+        navigatorKey: Routes.navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         initialRoute: Routes.splash,

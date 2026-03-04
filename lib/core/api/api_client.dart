@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../storage/storage_service.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
+import '../../routes.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -97,6 +98,10 @@ class ApiClient {
 
           final apiException = ApiException.fromDioException(e);
 
+          if (e.response?.statusCode == 404) {
+            _logout();
+          }
+
           handler.reject(
             DioException(
               requestOptions: e.requestOptions,
@@ -112,4 +117,14 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  void _logout() async {
+    await _storageService.clearAuthData();
+    Future.microtask(() {
+      Routes.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        Routes.auth,
+        (route) => false,
+      );
+    });
+  }
 }
