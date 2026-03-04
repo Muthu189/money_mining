@@ -57,12 +57,23 @@ class KycViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> submitKycDocuments({
+
+  Future<bool> submitKycAndBankDetails({
     required String aadhaarNumber,
     required String panNumber,
+    required String accNo,
+    required String ifscCode,
   }) async {
-    if (_aadhaarFront == null || _aadhaarBack == null || _panImage == null) {
-      _error = 'Please upload all Identity documents';
+    if (_aadhaarFront == null || _aadhaarBack == null || _panImage == null || _bankImage == null) {
+      _error = 'Please upload all required documents';
+      notifyListeners();
+      return false;
+    }
+
+    // Check file sizes (2MB limit)
+    if (!_isFileSizeValid(_aadhaarFront!) || !_isFileSizeValid(_aadhaarBack!) || 
+        !_isFileSizeValid(_panImage!) || !_isFileSizeValid(_bankImage!)) {
+      _error = 'One or more files exceed the 2MB size limit.';
       notifyListeners();
       return false;
     }
@@ -71,58 +82,25 @@ class KycViewModel extends ChangeNotifier {
     _error = null;
     _successMessage = null;
     try {
-      // 1. Upload Images
+      // 1. Upload all Images
       final aadhaarFrontUrl = await _kycRepository.uploadImage(_aadhaarFront!);
       final aadhaarBackUrl = await _kycRepository.uploadImage(_aadhaarBack!);
       final panUrl = await _kycRepository.uploadImage(_panImage!);
+      final bankImageUrl = await _kycRepository.uploadImage(_bankImage!);
 
-      // 2. Submit Data
-      final response = await _kycRepository.uploadKycDetails(
+      // 2. Submit all Data together
+      final response = await _kycRepository.saveKycAndBankDetails(
         aadhaarNumber: aadhaarNumber,
         aadhaarFrontUrl: aadhaarFrontUrl,
         aadhaarBackUrl: aadhaarBackUrl,
         panNumber: panNumber,
         panUrl: panUrl,
-      );
-      _successMessage = response.message.isNotEmpty ? response.message : 'KYC documents uploaded successfully!';
-      _setLoading(false);
-      return true;
-    } on ApiException catch (e) {
-      _error = e.message;
-      _setLoading(false);
-      return false;
-    } catch (e) {
-      _error = 'Something went wrong. Please try again.';
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  Future<bool> submitBankDetails({
-    required String accNo,
-    required String ifscCode,
-  }) async {
-    if (_bankImage == null) {
-      _error = 'Please upload Bank Passbook/Cheque';
-      notifyListeners();
-      return false;
-    }
-
-    _setLoading(true);
-    _error = null;
-    _successMessage = null;
-    try {
-      // 1. Upload Image
-      final bankImageUrl = await _kycRepository.uploadImage(_bankImage!);
-
-      // 2. Submit Data
-      final response = await _kycRepository.addBankDetails(
         accNo: accNo,
         ifscCode: ifscCode,
         bankImageUrl: bankImageUrl,
       );
-      _successMessage = response.message.isNotEmpty ? response.message : 'Bank details submitted successfully!';
-      // After success -> status = pending verification
+      
+      _successMessage = response.message.isNotEmpty ? response.message : 'KYC and Bank details submitted successfully!';
       _kycStatus = 'pending';
       _fetchKycStatus(); // Refresh status
       _setLoading(false);
@@ -138,6 +116,11 @@ class KycViewModel extends ChangeNotifier {
     }
   }
 
+  bool _isFileSizeValid(File file) {
+    const int maxBytes = 2 * 1024 * 1024; // 2MB
+    return file.lengthSync() <= maxBytes;
+  }
+
   Future<void> _fetchKycStatus() async {
     await fetchKycStatus();
   }
@@ -146,15 +129,31 @@ class KycViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       final response = await _kycRepository.getKycStatus();
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        _kycData = data;
-        if (data['status'] != null) {
-          _kycStatus = data['status'].toString().toLowerCase();
+      if (response.status == 1 && response.data is Map<String, dynamic>) {
+        final data = response.data['data'];
+        if (data is Map<String, dynamic>) {
+          _kycData = data;
+          
+          // Map API status to local status
+          // is_kyc_verified: 0=pending/new, 1=verified, 2=rejected? 
+          // Based on typical logic: 
+          // If both verified -> approved
+          // If any is 0 but has data -> pending
+          // If no data -> new
+          
+          final isKycVerified = data['is_kyc_verified'] == 1;
+          final isBankVerified = data['is_bank_verified'] == 1;
+          
+          if (isKycVerified && isBankVerified) {
+            _kycStatus = 'approved';
+          } else if (data['aadhaar_number'] != null || data['pan_number'] != null) {
+            _kycStatus = 'pending';
+          } else {
+            _kycStatus = 'new';
+          }
         }
       }
     } on ApiException catch (e) {
-      // If error (e.g. 404 not found), maybe status is 'new'
       debugPrint("Error fetching KYC status: ${e.message}");
     } catch (e) {
       debugPrint("Error fetching KYC status: $e");

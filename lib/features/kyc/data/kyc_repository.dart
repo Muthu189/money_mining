@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'dart:io';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_config.dart';
@@ -13,108 +14,81 @@ class KycRepository {
   Future<String> uploadImage(File image) async {
     try {
       String fileName = image.path.split('/').last;
+
       FormData formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(image.path, filename: fileName),
+        'file': await MultipartFile.fromFile(
+          image.path,
+          filename: fileName,
+        ),
       });
 
-      final response = await _apiClient.dio.post(ApiConfig.uploadImage, data: formData);
-      final apiResponse = ApiResponse.fromResponse(response);
-      if (!apiResponse.isSuccess) {
-        throw ApiException.fromApiResponse(apiResponse);
-      }
-      // Extract URL from data or from top-level response
-      final data = apiResponse.data;
-      if (data is Map<String, dynamic> && data['url'] != null) {
-        return data['url'];
-      }
-      // Fallback: check if url is at top level of response
-      if (response.data is Map<String, dynamic> && response.data['url'] != null) {
+      final response = await _apiClient.dio.post(
+        ApiConfig.uploadImage,
+        data: formData,
+      );
+
+      debugPrint("Upload Raw Response: ${response.data}");
+
+      if (response.statusCode == 200 &&
+          response.data is Map<String, dynamic> &&
+          response.data['url'] != null) {
         return response.data['url'];
       }
+
       throw ApiException(
         type: ApiErrorType.unknown,
-        message: 'Failed to get uploaded image URL.',
+        message: 'Invalid upload response format',
       );
-    } on ApiException {
-      rethrow;
     } on DioException catch (e) {
-      throw (e.error is ApiException)
-          ? e.error as ApiException
-          : ApiException.fromDioException(e);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(
-        type: ApiErrorType.unknown,
-        message: 'Something went wrong. Please try again.',
-      );
+      debugPrint("Upload Dio Error: ${e.response?.data}");
+      throw ApiException.fromDioException(e);
     }
   }
-
-  Future<ApiResponse> uploadKycDetails({
+  Future<ApiResponse> saveKycAndBankDetails({
     required String aadhaarNumber,
     required String aadhaarFrontUrl,
     required String aadhaarBackUrl,
     required String panNumber,
     required String panUrl,
-  }) async {
-    try {
-      final response = await _apiClient.dio.post(ApiConfig.uploadKycDetails, data: {
-        'aadhaar_number': aadhaarNumber,
-        'pan_number': panNumber,
-        'aadhaar_front_image': aadhaarFrontUrl,
-        'aadhaar_back_image': aadhaarBackUrl,
-        'pan_image': panUrl,
-      });
-      final apiResponse = ApiResponse.fromResponse(response);
-      if (!apiResponse.isSuccess) {
-        throw ApiException.fromApiResponse(apiResponse);
-      }
-      return apiResponse;
-    } on ApiException {
-      rethrow;
-    } on DioException catch (e) {
-      throw (e.error is ApiException)
-          ? e.error as ApiException
-          : ApiException.fromDioException(e);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(
-        type: ApiErrorType.unknown,
-        message: 'Something went wrong. Please try again.',
-      );
-    }
-  }
-
-  Future<ApiResponse> addBankDetails({
     required String accNo,
     required String ifscCode,
     required String bankImageUrl,
   }) async {
     try {
-      final response = await _apiClient.dio.post(ApiConfig.addBankDetails, data: {
+      final body = {
+        'aadhaar_number': aadhaarNumber,
+        'aadhaar_front_image': aadhaarFrontUrl,
+        'aadhaar_back_image': aadhaarBackUrl,
+        'pan_number': panNumber,
+        'pan_image': panUrl,
         'acc_no': accNo,
         'ifsc_code': ifscCode,
         'bank_image': bankImageUrl,
-      });
+      };
+
+      debugPrint("Submitting KYC Body: $body");
+
+      final response = await _apiClient.dio.post(
+        ApiConfig.saveKycAndBankDetails,
+        data: body,
+      );
+
+      debugPrint("KYC Raw Response: ${response.data}");
+
       final apiResponse = ApiResponse.fromResponse(response);
+
       if (!apiResponse.isSuccess) {
+        debugPrint("KYC API Failed: ${apiResponse.message}");
         throw ApiException.fromApiResponse(apiResponse);
       }
+
       return apiResponse;
-    } on ApiException {
-      rethrow;
     } on DioException catch (e) {
-      throw (e.error is ApiException)
-          ? e.error as ApiException
-          : ApiException.fromDioException(e);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(
-        type: ApiErrorType.unknown,
-        message: 'Something went wrong. Please try again.',
-      );
+      debugPrint("KYC Dio Error: ${e.response?.data}");
+      throw ApiException.fromDioException(e);
     }
   }
+
 
   Future<ApiResponse> getKycStatus() async {
     try {

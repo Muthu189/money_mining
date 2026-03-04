@@ -15,5 +15,6 @@ class ApiConfig {
   static const String uploadKycDetails = '/kyc/upload_kyc_details';
   static const String addBankDetails = '/kyc/addBankDetails';
   static const String getSingleKycDetail = '/kyc/getSingleKycDetail';
+  static const String saveKycAndBankDetails = '/kyc/saveKycAndBankDetails';
   static const String uploadImage = '/upload';
 }

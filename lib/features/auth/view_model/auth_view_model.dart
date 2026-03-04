@@ -160,18 +160,24 @@ class AuthViewModel extends ChangeNotifier {
     _setLoading(true);
     _error = null;
     _successMessage = null;
+
     try {
-      final response = await _authRepository.login(email: email, password: password);
-      // Extract token from data
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        _tempToken = data['token']?.toString() ?? '';
-      } else {
-        _tempToken = '';
-      }
-      _successMessage = response.message.isNotEmpty ? response.message : 'Login successful!';
+      final response = await _authRepository.login(
+        email: email,
+        password: password,
+      );
+
+      _tempToken = response.raw?['token']?.toString() ?? '';
+
+      print("Success token: $_tempToken");
+
+      _successMessage = response.message.isNotEmpty
+          ? response.message
+          : 'Login successful!';
+
       _setLoading(false);
       return true;
+
     } on ApiException catch (e) {
       _error = e.message;
       _setLoading(false);

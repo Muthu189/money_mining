@@ -162,49 +162,27 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
             GradientButton(
               text: 'SUBMIT VERIFICATION',
               onPressed: () async {
-                 // 1. Submit Identity
-                 bool identitySuccess = await viewModel.submitKycDocuments(
+                 bool success = await viewModel.submitKycAndBankDetails(
                    aadhaarNumber: _aadhaarController.text,
                    panNumber: _panController.text,
-                 );
-                 
-                 if (!identitySuccess) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(viewModel.error ?? 'Identity Upload Failed'),
-                        backgroundColor: Colors.red,
-                      ));
-                    }
-                    return;
-                 }
-
-                 if (mounted && viewModel.successMessage != null) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                     content: Text(viewModel.successMessage!),
-                     backgroundColor: Colors.green,
-                   ));
-                 }
-                 
-                 // 2. Submit Bank
-                 bool bankSuccess = await viewModel.submitBankDetails(
                    accNo: _accNoController.text,
                    ifscCode: _ifscController.text,
                  );
-
-                 if (bankSuccess) {
-                   if (mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                       content: Text(viewModel.successMessage ?? 'KYC Submitted Successfully!'),
-                       backgroundColor: Colors.green,
-                     ));
-                   }
+                 
+                 if (success) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(viewModel.successMessage ?? 'KYC Submitted Successfully!'),
+                        backgroundColor: Colors.green,
+                      ));
+                    }
                  } else {
-                   if (mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                       content: Text(viewModel.error ?? 'Bank Details Upload Failed'),
-                       backgroundColor: Colors.red,
-                     ));
-                   }
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(viewModel.error ?? 'Submission Failed'),
+                        backgroundColor: Colors.red,
+                      ));
+                    }
                  }
               },
             ),

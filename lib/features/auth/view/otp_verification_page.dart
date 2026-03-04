@@ -14,8 +14,13 @@ class OtpVerificationPage extends StatefulWidget {
 }
 
 class _OtpVerificationPageState extends State<OtpVerificationPage> {
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  static const int otpLength = 6;
+
+  final List<TextEditingController> _controllers =
+  List.generate(otpLength, (_) => TextEditingController());
+
+  final List<FocusNode> _focusNodes =
+  List.generate(otpLength, (_) => FocusNode());
 
   @override
   void dispose() {
@@ -29,39 +34,93 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   }
 
   void _onOtpChanged(String value, int index) {
-    if (value.length == 1 && index < 3) {
+    if (value.length == 1 && index < otpLength - 1) {
       _focusNodes[index + 1].requestFocus();
     }
+
     if (value.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
+    }
+
+    // Auto submit when last digit entered
+    if (index == otpLength - 1 && value.isNotEmpty) {
+      _verifyOtp();
     }
   }
 
   Future<void> _verifyOtp() async {
     final otp = _controllers.map((c) => c.text).join();
-    if (otp.length != 4) {
+
+    if (otp.length != otpLength) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 4-digit OTP')),
+        const SnackBar(
+          content: Text('Please enter a valid 6-digit OTP'),
+        ),
       );
       return;
     }
 
     final viewModel = context.read<AuthViewModel>();
     final success = await viewModel.verifyOtp(otp);
-    if (success && mounted) {
+
+    if (!mounted) return;
+
+    if (success) {
       if (viewModel.successMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(viewModel.successMessage!),
-          backgroundColor: Colors.green,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
-      Navigator.pushNamedAndRemoveUntil(context, Routes.dashboard, (route) => false);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(viewModel.error ?? 'Verification failed'),
-        backgroundColor: Colors.red,
-      ));
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        Routes.dashboard,
+            (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.error ?? 'Verification failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
+  }
+
+  Widget _buildOtpBox(int index) {
+    return Container(
+      width: 43,
+      height: 48,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      // decoration: BoxDecoration(
+      //   color: AppColors.darkGray,
+      //   borderRadius: BorderRadius.circular(12),
+      //   border: Border.all(color: AppColors.luxuryGold),
+      // ),
+      child: Center(
+        child: TextField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+          decoration: const InputDecoration(
+            counterText: '',
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+          ),
+          onChanged: (value) => _onOtpChanged(value, index),
+        ),
+      ),
+    );
   }
 
   @override
@@ -82,55 +141,41 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 40),
+
             Text(
               'Enter Verification Code',
-              style: AppTextStyles.headlineMedium.copyWith(color: Colors.white),
+              style: AppTextStyles.headlineMedium
+                  .copyWith(color: Colors.white),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 16),
+
             Text(
-              'We sent a 4-digit code to your email/phone.',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54),
+              'We sent a 6-digit code to your email/phone.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: Colors.white54),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 40),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                return Container(
-                  width: 50,
-                  height: 50,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkGray,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.luxuryGold),
-                  ),
-                  child: Center(
-                    child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      maxLength: 1,
-                      onChanged: (value) => _onOtpChanged(value, index),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-                      decoration: const InputDecoration(
-                        counterText: '',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                );
-              }),
+              children: List.generate(
+                otpLength,
+                    (index) => _buildOtpBox(index),
+              ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             if (viewModel.isLoading)
-              const Center(child: CircularProgressIndicator(color: AppColors.luxuryGold))
+              const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.luxuryGold,
+                ),
+              )
             else
               GradientButton(
                 text: 'VERIFY & PROCEED',

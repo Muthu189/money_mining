@@ -178,7 +178,7 @@ class AuthRepository {
       }
 
       // On success store jToken and token
-      final data = apiResponse.data;
+      final data = apiResponse.raw;
       if (data != null && data is Map<String, dynamic>) {
         final jToken = data['jToken'];
         final secondaryToken = data['token'];
