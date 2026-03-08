@@ -9,7 +9,7 @@ class NotificationCenterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications Center'),
+        title: const Text('Notifications'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 20),
@@ -27,26 +27,26 @@ class NotificationCenterPage extends StatelessWidget {
           padding: const EdgeInsets.all(24.0),
           children: [
             // No image placeholder as per screenshot, using icon instead for "empty" state if needed, 
-            // but screenshot shows list so we implement list.
-            Center(
-              child: Container(
-                width: 100, height: 100,
-                margin: const EdgeInsets.only(bottom: 32, top: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.spa, size: 32, color: Colors.white54),
-                    SizedBox(height: 8),
-                    Text('LUXURY', style: TextStyle(fontSize: 10, color: Colors.white24)),
-                    Text('MONEYMINING', style: TextStyle(fontSize: 8, color: Colors.white24)),
-                  ],
-                ),
-              ),
-            ),
+            // // but screenshot shows list so we implement list.
+            // Center(
+            //   child: Container(
+            //     width: 100, height: 100,
+            //     margin: const EdgeInsets.only(bottom: 32, top: 16),
+            //     decoration: BoxDecoration(
+            //       color: const Color(0xFF2A2A2A),
+            //       borderRadius: BorderRadius.circular(16),
+            //     ),
+            //     child: const Column(
+            //       mainAxisAlignment: MainAxisAlignment.center,
+            //       children: [
+            //         Icon(Icons.spa, size: 32, color: Colors.white54),
+            //         SizedBox(height: 8),
+            //         Text('LUXURY', style: TextStyle(fontSize: 10, color: Colors.white24)),
+            //         Text('MONEYMINING', style: TextStyle(fontSize: 8, color: Colors.white24)),
+            //       ],
+            //     ),
+            //   ),
+            // ),
             
             Padding(
                padding: const EdgeInsets.only(bottom: 16),
@@ -77,48 +77,25 @@ class NotificationCenterPage extends StatelessWidget {
               timeColor: AppColors.luxuryGold,
               body: 'Your KYC documentation has been approved. You now have full access to premium investment tiers.'
             ),
-            
-            const SizedBox(height: 24),
-            Padding(
-               padding: const EdgeInsets.only(bottom: 16),
-               child: Text('LAST WEEK', style: AppTextStyles.bodySmall.copyWith(letterSpacing: 1.5)),
-            ),
-            
-             _buildNotificationCard(
-              icon: Icons.notifications_active, 
-              title: 'Security Alert', 
-              time: 'MAR 12', 
-              body: 'New login detected from a Safari browser in London, UK. If this wasn\'t you, please secure your account.',
-              isRead: true
-            ),
-            
-             _buildNotificationCard(
-              icon: Icons.star, 
-              title: 'Exclusive Tier Unlock', 
-              time: 'MAR 10', 
-              timeColor: AppColors.luxuryGold,
-              body: 'Congratulations! You\'ve qualified for the DIAMOND MINER rewards program.',
-              highlightText: 'DIAMOND MINER'
-            ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: AppColors.matteBlack,
-        currentIndex: 2, // Highlight Activity/Bell
-        selectedItemColor: AppColors.luxuryGold,
-        unselectedItemColor: Colors.white54,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Assets'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Activity'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-         onTap: (index) {
-          if (index != 2) Navigator.pop(context);
-        },
-      ),
+      // bottomNavigationBar: BottomNavigationBar(
+      //   backgroundColor: AppColors.matteBlack,
+      //   currentIndex: 2, // Highlight Activity/Bell
+      //   selectedItemColor: AppColors.luxuryGold,
+      //   unselectedItemColor: Colors.white54,
+      //   type: BottomNavigationBarType.fixed,
+      //   items: const [
+      //     BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Home'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Assets'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Activity'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+      //   ],
+      //    onTap: (index) {
+      //     if (index != 2) Navigator.pop(context);
+      //   },
+      // ),
     );
   }
 

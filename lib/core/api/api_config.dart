@@ -20,4 +20,20 @@ class ApiConfig {
 
   //profile
   static const String getUserInfo = '/users/info';
+
+  // Payment
+  static const String createOrder = '/payments/createOrder';
+
+  // Withdrawal
+  static const String requestMoveWalletAmount = '/users/requestMoveWalletAmount';
+  static const String userWithdrawRequest = '/users/userWithdrawRequest';
+
+  // Transaction History
+  static const String transactionHistory = '/users/transactionHistory';
+
+  // Support Ticket Endpoints
+  static const String createTicket = '/users/createTicket';
+  static const String replyTicket = '/users/replyTicket';
+  static const String userTicketList = '/users/userTicketList';
+  static const String ticketDetails = '/users/ticketDetails';
 }

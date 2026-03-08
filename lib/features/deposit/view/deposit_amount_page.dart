@@ -4,6 +4,10 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
+import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../payment/view_model/payment_view_model.dart';
+import '../../profile/view_model/profile_view_model.dart';
 
 class DepositAmountPage extends StatefulWidget {
   const DepositAmountPage({super.key});
@@ -16,21 +20,114 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
   int _selectedMethodIndex = 0;
   final TextEditingController _amountController = TextEditingController();
   bool _isSuccess = false;
-  bool _isLoading = false;
+  late Razorpay _razorpay;
+
+  // Placeholder key - replace with your actual Razorpay Key ID
+  final String _razorpayKey = 'rzp_test_SE3VsHmaMwY3AE';
 
   final List<Map<String, dynamic>> _methods = [
     {'name': 'Razorpay (UPI, Cards)', 'icon': Icons.payment},
     {'name': 'Bank Transfer (NEFT/IMPS)', 'icon': Icons.account_balance},
   ];
 
-  void _processDeposit() async {
-    setState(() => _isLoading = true);
-    // Simulate Razorpay Delay
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      _isLoading = false;
-      _isSuccess = true;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear(); // Removes all listeners
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  void _startRazorpayPayment() {
+    final amountString = _amountController.text.trim();
+    if (amountString.isEmpty) {
+      _showSnackBar('Please enter an amount', isError: true);
+      return;
+    }
+
+    final amount = double.tryParse(amountString);
+    if (amount == null || amount <= 0) {
+      _showSnackBar('Please enter a valid amount', isError: true);
+      return;
+    }
+
+    // Razorpay amount is in paise (₹1 = 100 paise)
+    final amountInPaise = (amount * 100).toInt();
+    
+    // Get user details for prefill if available
+    final user = context.read<ProfileViewModel>().user;
+
+    var options = {
+      'key': _razorpayKey,
+      'amount': amountInPaise,
+      'name': 'Money Mining',
+      'description': 'Deposit to Mining Vault',
+      'retry': {'enabled': true, 'max_count': 1},
+      'send_sms_hash': true,
+      'prefill': {
+        'contact': user?.mblno ?? '',
+        'email': user?.email ?? ''
+      },
+      'external': {
+        'wallets': ['paytm']
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint('Error opening Razorpay: $e');
+      _showSnackBar('Could not open payment gateway', isError: true);
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    // Payment succeeded on Razorpay.
+    // Now call our backend API to create the order and record it.
+    
+    final amountString = _amountController.text.trim();
+    final amount = double.tryParse(amountString) ?? 0.0;
+    final amountInPaise = (amount * 100).toInt(); // API expects paise
+    
+    final viewModel = context.read<PaymentViewModel>();
+    final success = await viewModel.createOrder(amount.toInt());
+
+    if (success && mounted) {
+      setState(() {
+        _isSuccess = true;
+      });
+      // Refresh user profile to fetch updated balances
+      context.read<ProfileViewModel>().fetchUserInfo();
+    } else if (mounted) {
+      _showSnackBar(viewModel.error ?? 'Failed to record payment on server', isError: true);
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    _showSnackBar('Payment failed: ${response.message ?? 'Unknown error'}', isError: true);
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    _showSnackBar('External Wallet Selected: ${response.walletName}');
+  }
+  
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -44,9 +141,24 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: _isSuccess ? _buildSuccessInvoice() : _buildDepositForm(),
+        child: Consumer<PaymentViewModel>(
+          builder: (context, viewModel, child) {
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: _isSuccess ? _buildSuccessInvoice(viewModel) : _buildDepositForm(),
+                ),
+                if (viewModel.isLoading)
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child: CircularProgressIndicator(color: AppColors.luxuryGold),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -117,14 +229,17 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
         const SizedBox(height: 40),
         
         GradientButton(
-          text: _isLoading ? 'PROCESSING...' : 'DEPOSIT + CONTINUE',
-          onPressed: _isLoading ? () {} : _processDeposit,
+          text: 'PROCEED TO PAYMENT',
+          onPressed: _selectedMethodIndex == 0 ? _startRazorpayPayment : () {
+            _showSnackBar('Bank transfer selected - coming soon', isError: true);
+          },
         ),
       ],
     );
   }
 
-  Widget _buildSuccessInvoice() {
+  Widget _buildSuccessInvoice(PaymentViewModel viewModel) {
+    final order = viewModel.order;
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -145,11 +260,11 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
           ),
           child: Column(
             children: [
-              _buildInvoiceRow('Transaction ID', 'TXN55998822'),
-              const Divider(color: Colors.white12, height: 32),
-              _buildInvoiceRow('Date', 'Oct 25, 2023, 10:30 AM'),
-              const Divider(color: Colors.white12, height: 32),
-              _buildInvoiceRow('Payment Method', 'Razorpay UPI'),
+              if (order != null) ...[
+                _buildInvoiceRow('Order ID', order.id),
+                const Divider(color: Colors.white12, height: 32),
+              ],
+              _buildInvoiceRow('Payment Method', 'Razorpay'),
               const Divider(color: Colors.white12, height: 32),
               _buildInvoiceRow('Amount Deposited', '₹ ${_amountController.text}', isBold: true),
             ],

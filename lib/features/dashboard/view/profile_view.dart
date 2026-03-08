@@ -34,12 +34,21 @@ class _ProfileViewState extends State<ProfileView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Failed to load profile', style: TextStyle(color: Colors.white)),
-                const SizedBox(height: 16),
-                buildGradientButton(
-                  text: 'Retry',
-                  onPressed: () => model.fetchUserInfo(),
-                  icon: Icons.refresh,
+                const Icon(Icons.cloud_off, color: AppColors.luxuryGold, size: 64),
+                const SizedBox(height: 24),
+                const Text('Profile Unavailable', style: AppTextStyles.headlineMedium),
+                const SizedBox(height: 8),
+                Text('Could not load your profile details.',
+                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54), textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: 200,
+                  height: 50,
+                  child: buildGradientButton(
+                    text: 'Tap to Retry',
+                    onPressed: () => model.fetchUserInfo(),
+                    icon: Icons.refresh,
+                  ),
                 ),
               ],
             ),
@@ -258,30 +267,30 @@ class _ProfileViewState extends State<ProfileView> {
 
               const SizedBox(height: 32),
 
-              Align(alignment: Alignment.centerLeft, child: Text('LOGIN ACTIVITY', style: AppTextStyles.bodySmall.copyWith(color: AppColors.luxuryGold))),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.darkGray,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.smartphone, color: Colors.white54),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('iPhone 14 Pro Max', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        Text('Today, 08:30 AM • Mumbai, IN', style: AppTextStyles.bodySmall.copyWith(color: Colors.white38)),
-                      ],
-                    ),
-                    const Spacer(),
-                    const Text('Active', style: TextStyle(color: AppColors.successGreen, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
+              // Align(alignment: Alignment.centerLeft, child: Text('LOGIN ACTIVITY', style: AppTextStyles.bodySmall.copyWith(color: AppColors.luxuryGold))),
+              // const SizedBox(height: 16),
+              // Container(
+              //   padding: const EdgeInsets.all(16),
+              //   decoration: BoxDecoration(
+              //     color: AppColors.darkGray,
+              //     borderRadius: BorderRadius.circular(16),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       const Icon(Icons.smartphone, color: Colors.white54),
+              //       const SizedBox(width: 16),
+              //       Column(
+              //         crossAxisAlignment: CrossAxisAlignment.start,
+              //         children: [
+              //           const Text('iPhone 14 Pro Max', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              //           Text('Today, 08:30 AM • Mumbai, IN', style: AppTextStyles.bodySmall.copyWith(color: Colors.white38)),
+              //         ],
+              //       ),
+              //       const Spacer(),
+              //       const Text('Active', style: TextStyle(color: AppColors.successGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+              //     ],
+              //   ),
+              // ),
 
               const SizedBox(height: 32),
 
@@ -295,17 +304,17 @@ class _ProfileViewState extends State<ProfileView> {
 
               const SizedBox(height: 16),
 
-              OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.delete_forever, color: AppColors.dangerRed),
-                label: const Text('Delete Account', style: TextStyle(color: AppColors.dangerRed)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white12),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
+              // OutlinedButton.icon(
+              //   onPressed: () {},
+              //   icon: const Icon(Icons.delete_forever, color: AppColors.dangerRed),
+              //   label: const Text('Delete Account', style: TextStyle(color: AppColors.dangerRed)),
+              //   style: OutlinedButton.styleFrom(
+              //     side: const BorderSide(color: Colors.white12),
+              //     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              //     minimumSize: const Size(double.infinity, 50),
+              //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              //   ),
+              // ),
 
               const SizedBox(height: 24),
 

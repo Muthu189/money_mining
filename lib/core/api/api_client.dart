@@ -101,6 +101,9 @@ class ApiClient {
           if (e.response?.statusCode == 404) {
             _logout();
           }
+          if (e.response?.statusCode == 400) {
+            _logout();
+          }
 
           handler.reject(
             DioException(

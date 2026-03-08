@@ -4,6 +4,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
+import 'package:provider/provider.dart';
+import '../../profile/view_model/profile_view_model.dart';
+import '../view_model/withdrawal_view_model.dart';
 
 
 class WithdrawalPage extends StatefulWidget {
@@ -15,11 +18,9 @@ class WithdrawalPage extends StatefulWidget {
 
 class _WithdrawalPageState extends State<WithdrawalPage> {
   final TextEditingController _amountController = TextEditingController();
-  final double _balance = 124580.00;
   String? _selectedBank;
   bool _isWalletWithdraw = false;
   bool _isSubmitted = false;
-  bool _isLoading = false;
   
   final List<String> _bankAccounts = [
     'Goldman Sachs Premium •••• 8824',
@@ -43,12 +44,59 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   void _submitWithdrawal() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      _isLoading = false;
-      _isSubmitted = true;
-    });
+    final amountString = _amountController.text.trim();
+    if (amountString.isEmpty) {
+      _showSnackBar('Please enter an amount', isError: true);
+      return;
+    }
+
+    final amount = double.tryParse(amountString);
+    if (amount == null || amount <= 0) {
+      _showSnackBar('Please enter a valid amount', isError: true);
+      return;
+    }
+
+    final user = context.read<ProfileViewModel>().user;
+    if (user == null) {
+      _showSnackBar('Unable to get user balance', isError: true);
+      return;
+    }
+
+    final maxBalance = _isWalletWithdraw ? user.wallet : user.mainWallet;
+    if (amount > maxBalance) {
+      _showSnackBar('Insufficient balance', isError: true);
+      return;
+    }
+
+    final viewModel = context.read<WithdrawalViewModel>();
+    bool success;
+
+    if (_isWalletWithdraw) {
+      success = await viewModel.withdrawRequest(amountString);
+    } else {
+      success = await viewModel.moveWalletAmount(amountString);
+    }
+
+    if (success && mounted) {
+      setState(() {
+        _isSubmitted = true;
+      });
+      // Refresh balance across app
+      context.read<ProfileViewModel>().fetchUserInfo();
+    } else if (mounted) {
+      _showSnackBar(viewModel.error ?? 'Failed to submit request', isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -65,15 +113,35 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: _isSubmitted ? _buildSuccessView() : _buildWithdrawForm(),
+        child: Consumer<WithdrawalViewModel>(
+          builder: (context, viewModel, child) {
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: _isSubmitted ? _buildSuccessView(viewModel) : _buildWithdrawForm(),
+                ),
+                if (viewModel.isLoading)
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child: CircularProgressIndicator(color: AppColors.luxuryGold),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildWithdrawForm() {
+    final user = context.watch<ProfileViewModel>().user;
+    final balance = user != null 
+        ? (_isWalletWithdraw ? user.wallet : user.mainWallet)
+        : 0.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -92,7 +160,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               Text(_isWalletWithdraw ? 'Wallet Balance' : 'Vault Balance', style: const TextStyle(color: Colors.white54)),
               const SizedBox(height: 8),
               Text(
-                '₹ 124,580.00', 
+                '₹ ${balance.toStringAsFixed(2)}', 
                 style: AppTextStyles.displayLarge.copyWith(fontSize: 36, color: Colors.white),
               ),
               const SizedBox(height: 12),
@@ -148,7 +216,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               GestureDetector(
                 onTap: () {
                   setState(() {
-                    _amountController.text = _balance.toStringAsFixed(2);
+                    _amountController.text = balance.toStringAsFixed(2);
                   });
                 },
                 child: Container(
@@ -215,18 +283,15 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         ),
         
         const SizedBox(height: 40),
-        
         GradientButton(
-          text: _isLoading 
-              ? 'PROCESSING...' 
-              : (_isWalletWithdraw ? 'WITHDRAW NOW' : 'SUBMIT REQUEST'),
-          onPressed: _isLoading ? () {} : _submitWithdrawal,
+          text: _isWalletWithdraw ? 'WITHDRAW NOW' : 'SUBMIT REQUEST',
+          onPressed: _submitWithdrawal,
         ),
       ],
     );
   }
 
-  Widget _buildSuccessView() {
+  Widget _buildSuccessView(WithdrawalViewModel viewModel) {
     if (_isWalletWithdraw) {
       // Wallet Withdraw Success
       return Column(
@@ -236,7 +301,11 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
            const SizedBox(height: 24),
            const Text('Withdrawal Successful', style: AppTextStyles.headlineMedium),
            const SizedBox(height: 8),
-           const Text('Your funds have been transferred to your bank account.', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
+           Text(viewModel.successMessage ?? 'Your funds have been transferred to your bank account.', style: const TextStyle(color: Colors.white54), textAlign: TextAlign.center),
+           if (viewModel.referenceId != null && viewModel.referenceId!.isNotEmpty) ...[
+             const SizedBox(height: 16),
+             Text('Ref ID: ${viewModel.referenceId}', style: const TextStyle(color: AppColors.luxuryGold, fontSize: 16)),
+           ],
            const SizedBox(height: 40),
            _buildTransactionDetails(isSuccess: true),
            const SizedBox(height: 40),
@@ -252,7 +321,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
            const SizedBox(height: 24),
            const Text('Request Submitted', style: AppTextStyles.headlineMedium),
            const SizedBox(height: 8),
-           const Text('Your withdrawal request is under review. Admin approval typically takes 24 hours.', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
+           Text(viewModel.successMessage ?? 'Your withdrawal request is under review. Admin approval typically takes 24 hours.', style: const TextStyle(color: Colors.white54), textAlign: TextAlign.center),
            const SizedBox(height: 40),
            _buildTransactionDetails(isSuccess: false),
             const SizedBox(height: 40),

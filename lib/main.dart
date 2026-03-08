@@ -9,6 +9,14 @@ import 'features/kyc/data/kyc_repository.dart';
 import 'features/kyc/view_model/kyc_view_model.dart';
 import 'features/profile/data/profile_repository.dart';
 import 'features/profile/view_model/profile_view_model.dart';
+import 'features/payment/data/payment_repository.dart';
+import 'features/payment/view_model/payment_view_model.dart';
+import 'features/withdrawal/data/withdrawal_repository.dart';
+import 'features/withdrawal/view_model/withdrawal_view_model.dart';
+import 'features/dashboard/data/transaction_repository.dart';
+import 'features/dashboard/view_model/transaction_view_model.dart';
+import 'features/support/data/support_repository.dart';
+import 'features/support/view_model/support_view_model.dart';
 import 'routes.dart';
 
 void main() {
@@ -48,6 +56,34 @@ class MoneyMiningApp extends StatelessWidget {
         ChangeNotifierProxyProvider<ProfileRepository, ProfileViewModel>(
           create: (context) => ProfileViewModel(context.read<ProfileRepository>()),
           update: (_, profileRepository, viewModel) => ProfileViewModel(profileRepository),
+        ),
+        ProxyProvider<ApiClient, PaymentRepository>(
+          update: (_, apiClient, __) => PaymentRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<PaymentRepository, PaymentViewModel>(
+          create: (context) => PaymentViewModel(context.read<PaymentRepository>()),
+          update: (_, paymentRepository, viewModel) => PaymentViewModel(paymentRepository),
+        ),
+        ProxyProvider<ApiClient, WithdrawalRepository>(
+          update: (_, apiClient, __) => WithdrawalRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<WithdrawalRepository, WithdrawalViewModel>(
+          create: (context) => WithdrawalViewModel(context.read<WithdrawalRepository>()),
+          update: (_, withdrawalRepository, viewModel) => WithdrawalViewModel(withdrawalRepository),
+        ),
+        ProxyProvider<ApiClient, TransactionRepository>(
+          update: (_, apiClient, __) => TransactionRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<TransactionRepository, TransactionViewModel>(
+          create: (context) => TransactionViewModel(context.read<TransactionRepository>()),
+          update: (_, transactionRepository, viewModel) => TransactionViewModel(transactionRepository),
+        ),
+        ProxyProvider<ApiClient, SupportRepository>(
+          update: (_, apiClient, __) => SupportRepository(apiClient),
+        ),
+        ChangeNotifierProxyProvider<SupportRepository, SupportViewModel>(
+          create: (context) => SupportViewModel(context.read<SupportRepository>()),
+          update: (_, supportRepository, viewModel) => SupportViewModel(supportRepository),
         ),
       ],
       child: MaterialApp(

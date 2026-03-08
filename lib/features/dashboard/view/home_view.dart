@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
 import '../../kyc/view_model/kyc_view_model.dart';
+import '../../kyc/view_model/kyc_view_model.dart';
+import '../../profile/view_model/profile_view_model.dart';
+import '../view_model/transaction_view_model.dart';
 
 class HomeView extends StatefulWidget {
   final Function(int) onSwitchTab;
@@ -16,306 +21,310 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   bool _isBalanceVisible = true;
-  final double _miningBalance = 1250000.00;
-  final double _walletBalance = 4520.00; // Withdrawable
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      context.read<ProfileViewModel>().fetchUserInfo();
+      context.read<TransactionViewModel>().loadInitialData(3);
+      context.read<KycViewModel>().fetchKycStatus();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          _buildHeader(context),
-          
-          const SizedBox(height: 24),
+    return Consumer<ProfileViewModel>(
+      builder: (context, model, child) {
+        if (model.isLoading && model.user == null) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.luxuryGold));
+        }
 
-          // Banner Ads Section
-          Container(
-            width: double.infinity,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              image: const DecorationImage(
-                image: NetworkImage('https://placeholder.com/banner'), // Placeholder
-                fit: BoxFit.cover,
-              ),
-              color: AppColors.darkGray,
-            ),
-             child: Stack(
+        final user = model.user;
+
+        if (user == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.luxuryGold,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text('PROMO', style: TextStyle(color: AppColors.matteBlack, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Get 10% Extra on Standard Tier', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
+                const Icon(Icons.cloud_off, color: AppColors.luxuryGold, size: 64),
+                const SizedBox(height: 24),
+                const Text('Profile Unavailable', style: AppTextStyles.headlineMedium),
+                const SizedBox(height: 8),
+                Text('Could not load your information at this time.',
+                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54), textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: 200,
+                  height: 50,
+                  child: buildGradientButton(
+                    text: 'Tap to Retry',
+                    onPressed: () => model.fetchUserInfo(),
+                    icon: Icons.refresh,
                   ),
                 ),
               ],
             ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Balance Card
-          _buildBalanceCard(context),
-          
-          const SizedBox(height: 24),
+          );
+        }
 
-          // Wallet Box (Withdrawable)
-          _buildWalletBox(),
-
-          const SizedBox(height: 24),
-          
-          // Action Buttons
-          _buildActionButtons(context),
-
-          const SizedBox(height: 24),
-          
-          // Bonus Sections
-          Row(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildBonusCard('Referral Bonus', '₹ 1,250', Icons.people_outline)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildBonusCard('Daily ROI', '₹ 450', Icons.trending_up)),
-            ],
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Recent Activity Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('RECENT INTEREST CREDITED', style: AppTextStyles.bodySmall.copyWith(fontSize: 12, letterSpacing: 1.5, color: Colors.white54)),
-              GestureDetector(
-                onTap: () => widget.onSwitchTab(1), // Switch to Transactions Tab
-                child: const Text('View All', style: TextStyle(color: AppColors.luxuryGold, fontSize: 12)),
+
+              _buildHeader(context, user.username),
+
+              const SizedBox(height: 24),
+
+              Container(
+                width: double.infinity,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: const DecorationImage(
+                    image: NetworkImage('https://placeholder.com/banner'),
+                    fit: BoxFit.cover,
+                  ),
+                  color: AppColors.darkGray,
+                ),
               ),
+
+              const SizedBox(height: 24),
+
+              _buildBalanceCard(context, user.mainWallet, user.todayRoi),
+
+              const SizedBox(height: 24),
+
+              _buildWalletBox(context, user.wallet),
+
+              const SizedBox(height: 24),
+
+              _buildActionButtons(context),
+
+              const SizedBox(height: 24),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildBonusCard(
+                        'Referral Bonus',
+                        '₹ ${user.totalRefRoi.toStringAsFixed(2)}',
+                        Icons.people_outline),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildBonusCard(
+                        'Daily ROI',
+                        '₹ ${user.todayRoi.toStringAsFixed(2)}',
+                        Icons.trending_up),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('RECENT INTEREST CREDITED',
+                      style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 12,
+                          letterSpacing: 1.5,
+                          color: Colors.white54)),
+                  GestureDetector(
+                    onTap: () => widget.onSwitchTab(1),
+                    child: const Text('View All',
+                        style: TextStyle(
+                            color: AppColors.luxuryGold, fontSize: 12)),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              Consumer<TransactionViewModel>(
+                builder: (context, txModel, child) {
+                  final state = txModel.getCategoryState(3);
+                  
+                  if (state.isLoading && state.transactions.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(color: AppColors.luxuryGold),
+                      ),
+                    );
+                  }
+
+                  if (state.transactions.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(
+                          'No recent interest credited yet',
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Take only the first 3 transactions for the home view
+                  final count = state.transactions.length > 3 ? 3 : state.transactions.length;
+                  return Column(
+                    children: state.transactions.take(count).map((tx) {
+                      return _buildTransactionItem(
+                        tx.title,
+                        tx.status,
+                        tx.date,
+                        '+ ₹ ${tx.amount.toStringAsFixed(2)}',
+                        tx.status.toLowerCase() == 'success' || tx.status.toLowerCase() == 'approved',
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 80),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Transactions List (Only Interest Credits)
-          _buildTransactionItem('Daily Interest', 'Received', 'Today, 12:00 PM', '+ ₹ 6,250.00', true),
-          _buildTransactionItem('Daily Interest', 'Received', 'Yesterday, 12:00 PM', '+ ₹ 6,120.00', true),
-          _buildTransactionItem('Referral Bonus', 'Received', 'Yesterday, 10:30 AM', '+ ₹ 500.00', true),
-          
-          const SizedBox(height: 80), // Bottom padding for nav bar
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String username) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         GestureDetector(
-          onTap: () => widget.onSwitchTab(3), // Navigate to Profile Tab
+          onTap: () => widget.onSwitchTab(3),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.luxuryGold, width: 1.5),
+                  border:
+                  Border.all(color: AppColors.luxuryGold, width: 1.5),
                 ),
                 child: const CircleAvatar(
                   radius: 20,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'), // Placeholder
-                  backgroundColor: Colors.grey,
+                  backgroundImage:
+                  NetworkImage('https://i.pravatar.cc/150?img=11'),
                 ),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('WELCOME BACK', style: TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.0)),
-                  Text('Hi, Abdul', style: AppTextStyles.headlineMedium.copyWith(fontSize: 20, color: Colors.white)),
+                  const Text('WELCOME BACK',
+                      style:
+                      TextStyle(color: Colors.white54, fontSize: 10)),
+                  Text('Hi, $username',
+                      style: AppTextStyles.headlineMedium.copyWith(
+                          fontSize: 20, color: Colors.white)),
                 ],
               ),
             ],
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            onPressed: () => Navigator.pushNamed(context, Routes.notifications),
-            icon: const Icon(Icons.notifications_none, color: AppColors.luxuryGold),
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.all(10),
-            iconSize: 24,
-          ),
+        IconButton(
+          onPressed: () =>
+              Navigator.pushNamed(context, Routes.notifications),
+          icon: const Icon(Icons.notifications_none,
+              color: AppColors.luxuryGold),
         ),
       ],
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context) {
+  Widget _buildBalanceCard(
+      BuildContext context, double balance, double todayRoi) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: const Color(0xFF1A1A1D), // Dark Card Bg
+        color: const Color(0xFF1A1A1D),
         border: Border.all(color: Colors.white10),
-        boxShadow: const [
-           BoxShadow(
-            color: Colors.black45,
-            blurRadius: 20,
-            offset: Offset(0, 10),
-          ),
-        ],
       ),
-      child: Stack(
-        children: [
-           // Background mesh/gradient (subtle)
-           Positioned.fill(
-             child: Container(
-               decoration: BoxDecoration(
-                 borderRadius: BorderRadius.circular(24),
-                 gradient: LinearGradient(
-                   begin: Alignment.topLeft,
-                   end: Alignment.bottomRight,
-                   colors: [
-                     Colors.white.withOpacity(0.05),
-                     Colors.transparent,
-                   ],
-                 ),
-               ),
-             ),
-           ),
-          
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MINING VAULT BALANCE',
-                           style: AppTextStyles.bodySmall.copyWith(
+                    Text('MINING VAULT BALANCE',
+                        style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.luxuryGold,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                         Text(
-                          'Total Asset Value',
-                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: Colors.white54,
-                          ),
-                        ),
-                      ],
-                    ),
-                    InkWell(
-                      onTap: () => setState(() => _isBalanceVisible = !_isBalanceVisible),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.luxuryGold.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          _isBalanceVisible ? Icons.visibility : Icons.visibility_off, 
-                          color: AppColors.luxuryGold, 
-                          size: 20
-                        ),
-                      ),
-                    ),
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Total Asset Value',
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: Colors.white54)),
                   ],
                 ),
-                const SizedBox(height: 16),
-                
-                Text(
-                  _isBalanceVisible ? '₹ 12,50,000.00' : '₹ ••••••••', 
-                  style: AppTextStyles.headlineLarge.copyWith(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                Divider(color: Colors.white.withOpacity(0.1)),
-                const SizedBox(height: 12),
-                
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Today\'s Growth', style: TextStyle(color: Colors.white38, fontSize: 10)),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                             const Icon(Icons.trending_up, color: AppColors.successGreen, size: 16),
-                             const SizedBox(width: 4),
-                             Text(
-                               '₹ 3,750.00 (0.3%)',
-                               style: AppTextStyles.bodyMedium.copyWith(
-                                 color: AppColors.successGreen,
-                                 fontWeight: FontWeight.bold,
-                               ),
-                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                InkWell(
+                  onTap: () =>
+                      setState(() => _isBalanceVisible = !_isBalanceVisible),
+                  child: Icon(
+                      _isBalanceVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: AppColors.luxuryGold),
                 ),
               ],
             ),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            Text(
+              _isBalanceVisible
+                  ? '₹ ${balance.toStringAsFixed(2)}'
+                  : '₹ ••••••••',
+              style: AppTextStyles.headlineLarge.copyWith(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                const Icon(Icons.trending_up,
+                    color: AppColors.successGreen, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '₹ ${todayRoi.toStringAsFixed(2)}',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.successGreen,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildWalletBox() {
+  Widget _buildWalletBox(BuildContext context, double wallet) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.luxuryGold.withOpacity(0.15), AppColors.luxuryGold.withOpacity(0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [
+            AppColors.luxuryGold.withOpacity(0.15),
+            AppColors.luxuryGold.withOpacity(0.05)
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.luxuryGold.withOpacity(0.3)),
@@ -323,36 +332,44 @@ class _HomeViewState extends State<HomeView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('WALLET BALANCE', style: TextStyle(color: AppColors.luxuryGold, fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('WALLET BALANCE',
+                  style: TextStyle(
+                      color: AppColors.luxuryGold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(
-                _isBalanceVisible ? '₹ 4,520.00' : '₹ ••••',
-                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                _isBalanceVisible
+                    ? '₹ ${wallet.toStringAsFixed(2)}'
+                    : '₹ ••••',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              const Text('Available for Instant Withdraw', style: TextStyle(color: Colors.white38, fontSize: 10)),
+              const Text('Available for Instant Withdraw',
+                  style: TextStyle(color: Colors.white38, fontSize: 10)),
             ],
           ),
+
           ElevatedButton(
             onPressed: () {
-              // Instant Wallet Withdraw Flow
-              Navigator.pushNamed(
-                context, 
-                Routes.withdrawal,
-                arguments: {'type': 'wallet'},
-              ); 
+              Navigator.pushNamed(context, Routes.withdrawal,
+                  arguments: {'type': 'wallet'});
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.luxuryGold,
               foregroundColor: AppColors.matteBlack,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-              minimumSize: const Size(0, 40),
             ),
-            child: const Text('Withdraw', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: const Text('Withdraw'),
+            ),
           ),
         ],
       ),
@@ -360,84 +377,45 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    // Watch KYC ViewModel
     final kycViewModel = context.watch<KycViewModel>();
-    
+
     return Row(
       children: [
-        // Deposit Fund (Add Money)
         Expanded(
           child: _buildActionButton(
-            label: 'Deposit Funds',
-            icon: Icons.add_circle_outline,
-            color: AppColors.luxuryGold,
-            textColor: AppColors.matteBlack,
-            onTap: () {
-               if (kycViewModel.kycStatus != 'approved') {
-                  _showKycDialog(context, kycViewModel.kycStatus);
-              } else {
-                 Navigator.pushNamed(context, Routes.depositAmount);
-              }
-            },
-          ),
+              label: 'Deposit Funds',
+              icon: Icons.add_circle_outline,
+              color: AppColors.luxuryGold,
+              textColor: AppColors.matteBlack,
+              onTap: () {
+                if (kycViewModel.kycStatus?.toLowerCase() != 'approved') {
+                  _showKycDialog(context, kycViewModel.kycStatus ?? 'Not Verified');
+                } else {
+                  Navigator.pushNamed(context, Routes.depositAmount);
+                }
+              }),
         ),
         const SizedBox(width: 12),
-        // Deposit Withdraw (Request to Admin)
         Expanded(
           child: _buildActionButton(
-            label: 'Withdraw Capital',
-            icon: Icons.logout,
-            color: AppColors.darkGray,
-            textColor: AppColors.luxuryGold,
-            borderColor: AppColors.luxuryGold,
-            onTap: () {
-               if (kycViewModel.kycStatus != 'approved') {
+              label: 'Withdraw Capital',
+              icon: Icons.logout,
+              color: AppColors.darkGray,
+              textColor: AppColors.luxuryGold,
+              borderColor: AppColors.luxuryGold,
+              onTap: () {
+                if (kycViewModel.kycStatus != 'approved') {
                   _showKycDialog(context, kycViewModel.kycStatus);
-              } else {
-                 // Navigate to withdrawal page with type 'Deposit'
-                 Navigator.pushNamed(
-                   context, 
-                   Routes.withdrawal, 
-                   arguments: {'type': 'deposit'}
-                 );
-              }
-            },
-          ),
+                } else {
+                  Navigator.pushNamed(context, Routes.withdrawal,
+                      arguments: {'type': 'deposit'});
+                }
+              }),
         ),
       ],
     );
   }
 
-  void _showKycDialog(BuildContext context, String status) {
-    showDialog(
-      context: context, 
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.darkGray,
-        title: const Text('KYC Required', style: TextStyle(color: AppColors.luxuryGold)),
-        content: Text(
-          status == 'pending' 
-          ? 'Your KYC is currently under review. Please wait for approval.'
-          : 'You need to complete KYC verification to perform this action.',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          if (status != 'pending')
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, Routes.kycVerification);
-              },
-              child: const Text('Verify Now', style: TextStyle(color: AppColors.luxuryGold)),
-            ),
-        ],
-      )
-    );
-  }
-  
   Widget _buildBonusCard(String title, String amount, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -451,21 +429,27 @@ class _HomeViewState extends State<HomeView> {
         children: [
           Icon(icon, color: Colors.white54, size: 20),
           const SizedBox(height: 12),
-          Text(title, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(title,
+              style:
+              const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(amount, style: const TextStyle(color: AppColors.luxuryGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(amount,
+              style: const TextStyle(
+                  color: AppColors.luxuryGold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
   Widget _buildActionButton({
-    required String label, 
-    required IconData icon, 
-    required Color color, 
-    required Color textColor, 
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color textColor,
     Color? borderColor,
-    required VoidCallback onTap
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -481,14 +465,49 @@ class _HomeViewState extends State<HomeView> {
           children: [
             Icon(icon, color: textColor, size: 18),
             const SizedBox(width: 8),
-            Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(label,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTransactionItem(String title, String status, String subtitle, String amount, bool isSuccess, {bool isNegative = false}) {
+  void _showKycDialog(BuildContext context, String status) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.darkGray,
+        title: const Text('KYC Required',
+            style: TextStyle(color: AppColors.luxuryGold)),
+        content: const Text(
+          'You need to complete KYC verification to perform this action.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child:
+            const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, Routes.kycVerification);
+            },
+            child: const Text('Verify Now',
+                style: TextStyle(color: AppColors.luxuryGold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(String title, String status,
+      String subtitle, String amount, bool isSuccess) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -505,30 +524,46 @@ class _HomeViewState extends State<HomeView> {
               color: AppColors.luxuryGold.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.token, // Hexagon/Token icon style
-              color: AppColors.luxuryGold,
-              size: 20,
-            ),
+            child: const Icon(Icons.token,
+                color: AppColors.luxuryGold, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: Colors.white38)),
+                Text(title,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(_formatDate(subtitle),
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: Colors.white38)),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(amount, style: const TextStyle(color: AppColors.luxuryGold, fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
+          Text(amount,
+              style: const TextStyle(
+                  color: AppColors.luxuryGold,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
         ],
       ),
     );
   }
+}
+
+String _formatDate(String isoDate) {
+  try {
+    final date = DateTime.parse(isoDate).toLocal();
+    return DateFormat('MMM dd, yyyy • hh:mm a').format(date);
+  } catch (e) {
+    return isoDate;
+  }
+}
+
+Widget buildGradientButton(
+    {required String text,
+      required VoidCallback onPressed,
+      required IconData icon}) {
+  return GradientButton(text: text, onPressed: onPressed, icon: icon);
 }

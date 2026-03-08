@@ -92,7 +92,7 @@ class KycRepository {
 
   Future<ApiResponse> getKycStatus() async {
     try {
-      final response = await _apiClient.dio.get(ApiConfig.getSingleKycDetail);
+      final response = await _apiClient.dio.post(ApiConfig.getSingleKycDetail);
       final apiResponse = ApiResponse.fromResponse(response);
       if (!apiResponse.isSuccess) {
         throw ApiException.fromApiResponse(apiResponse);

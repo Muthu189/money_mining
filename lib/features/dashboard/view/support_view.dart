@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../support/view/support_ticket_list_page.dart';
+import '../../support/view/create_ticket_page.dart';
 
 class SupportView extends StatelessWidget {
   const SupportView({super.key});
@@ -38,11 +40,39 @@ class SupportView extends StatelessWidget {
             crossAxisSpacing: 16,
             childAspectRatio: 1.1,
             children: [
-              _buildSupportCard(Icons.chat_bubble, 'Live Chat', 'Instant Response'),
-              _buildSupportCard(Icons.phone, 'Priority Call', '24/7 Dedicated Line'),
-              _buildSupportCard(Icons.email, 'Email', 'Official Support'),
+              _buildSupportCard(context, Icons.chat_bubble, 'Live Chat', 'Instant Response'),
+              _buildSupportCard(context, Icons.phone, 'Priority Call', '24/7 Dedicated Line'),
+              _buildSupportCard(context, Icons.email, 'Email', 'Official Support', onTap: () {
+              }),
+              _buildSupportCard(
+                context,
+                Icons.confirmation_number_outlined,
+                'Ticket',
+                'Track Tickets',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SupportTicketListPage(),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Center(
+          //   child: TextButton.icon(
+          //     onPressed: () {
+          //       Navigator.push(
+          //         context,
+          //         MaterialPageRoute(builder: (context) => const CreateTicketPage()),
+          //       );
+          //     },
+          //     icon: const Icon(Icons.add_circle_outline, color: AppColors.luxuryGold),
+          //     label: const Text('ADD NEW TICKET', style: TextStyle(color: AppColors.luxuryGold, fontWeight: FontWeight.bold)),
+          //   ),
+          // ),
           
           const SizedBox(height: 32),
           const Text('Frequently Asked Questions', style: AppTextStyles.headlineMedium),
@@ -68,31 +98,34 @@ class SupportView extends StatelessWidget {
     );
   }
 
-  Widget _buildSupportCard(IconData icon, String title, String subtitle) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.darkGray,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.luxuryGold.withOpacity(0.1),
-              shape: BoxShape.circle,
+  Widget _buildSupportCard(BuildContext context, IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.darkGray,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.luxuryGold.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.luxuryGold, size: 24),
             ),
-            child: Icon(icon, color: AppColors.luxuryGold, size: 24),
-          ),
-          const Spacer(),
-          Text(title, style: AppTextStyles.titleMedium),
-          const SizedBox(height: 4),
-          Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.luxuryGold)),
-        ],
+            const Spacer(),
+            Text(title, style: AppTextStyles.titleMedium),
+            const SizedBox(height: 4),
+            Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.luxuryGold)),
+          ],
+        ),
       ),
     );
   }
