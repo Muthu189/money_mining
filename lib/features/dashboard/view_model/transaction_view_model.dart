@@ -33,8 +33,6 @@ class TransactionViewModel extends ChangeNotifier {
 
   Future<void> loadInitialData(int type) async {
     final state = _categories[type]!;
-    if (state.transactions.isNotEmpty && !state.isLoading) return; // Already loaded
-
     state.isLoading = true;
     state.error = null;
     state.pageNo = 1;

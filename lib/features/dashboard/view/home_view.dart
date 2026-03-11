@@ -1,3 +1,4 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +6,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
-import '../../kyc/view_model/kyc_view_model.dart';
 import '../../kyc/view_model/kyc_view_model.dart';
 import '../../profile/view_model/profile_view_model.dart';
 import '../view_model/transaction_view_model.dart';
@@ -21,6 +21,14 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   bool _isBalanceVisible = true;
+  int _current = 0;
+  final CarouselSliderController _controller = CarouselSliderController();
+
+  final List<String> _sliderImages = [
+    'assets/images/slider1.jpeg',
+    'assets/images/slider2.jpeg',
+    'assets/images/slider3.jpeg',
+  ];
 
   @override
   void initState() {
@@ -79,17 +87,63 @@ class _HomeViewState extends State<HomeView> {
 
               const SizedBox(height: 24),
 
-              Container(
-                width: double.infinity,
-                height: 120,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  image: const DecorationImage(
-                    image: NetworkImage('https://placeholder.com/banner'),
-                    fit: BoxFit.cover,
+              Column(
+                children: [
+                  CarouselSlider(
+                    carouselController: _controller,
+                    options: CarouselOptions(
+                      height: 160,
+                      viewportFraction: 0.92,
+                      enlargeCenterPage: true,
+                      autoPlay: true,
+                      autoPlayInterval: const Duration(seconds: 4),
+                      autoPlayCurve: Curves.fastOutSlowIn,
+                      onPageChanged: (index, reason) {
+                        setState(() {
+                          _current = index;
+                        });
+                      },
+                    ),
+                    items: _sliderImages.map((assetPath) {
+                      return Builder(
+                        builder: (BuildContext context) {
+                          return Container(
+                            width: MediaQuery.of(context).size.width,
+                            margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              image: DecorationImage(
+                                image: AssetImage(assetPath),
+                                fit: BoxFit.cover,
+                              ),
+                              color: AppColors.darkGray,
+                            ),
+                          );
+                        },
+                      );
+                    }).toList(),
                   ),
-                  color: AppColors.darkGray,
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: _sliderImages.asMap().entries.map((entry) {
+                      return GestureDetector(
+                        onTap: () => _controller.animateToPage(entry.key),
+                        child: Container(
+                          width: 8.0,
+                          height: 8.0,
+                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.luxuryGold.withOpacity(
+                              _current == entry.key ? 0.9 : 0.2,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 24),
@@ -112,14 +166,14 @@ class _HomeViewState extends State<HomeView> {
                     child: _buildBonusCard(
                         'Referral Bonus',
                         '₹ ${user.totalRefRoi.toStringAsFixed(2)}',
-                        Icons.people_outline),
+                        Icons.people_outline,"0.10%"),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildBonusCard(
                         'Daily ROI',
                         '₹ ${user.todayRoi.toStringAsFixed(2)}',
-                        Icons.trending_up),
+                        Icons.trending_up,"0.30%"),
                   ),
                 ],
               ),
@@ -222,7 +276,7 @@ class _HomeViewState extends State<HomeView> {
                   const Text('WELCOME BACK',
                       style:
                       TextStyle(color: Colors.white54, fontSize: 10)),
-                  Text('Hi, $username',
+                  Text('Hi, ${username[0].toUpperCase()}${username.substring(1)}',
                       style: AppTextStyles.headlineMedium.copyWith(
                           fontSize: 20, color: Colors.white)),
                 ],
@@ -416,7 +470,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildBonusCard(String title, String amount, IconData icon) {
+  Widget _buildBonusCard(String title, String amount, IconData icon ,String rate) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -427,7 +481,27 @@ class _HomeViewState extends State<HomeView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white54, size: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: Colors.white54, size: 20),
+
+              Row(
+                children: [
+                  const Icon(Icons.trending_up,
+                      color: AppColors.successGreen, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$rate',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.successGreen,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+
+            ],
+          ),
           const SizedBox(height: 12),
           Text(title,
               style:

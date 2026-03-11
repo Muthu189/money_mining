@@ -130,21 +130,24 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 16),
 
               // KYC & Bank Badges
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildStatusBadge(
-                    icon: isKycVerified ? Icons.shield : Icons.shield_outlined,
-                    label: isKycVerified ? 'KYC VERIFIED' : 'VERIFY KYC',
-                    isVerified: isKycVerified,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildStatusBadge(
-                    icon: isBankVerified ? Icons.account_balance : Icons.account_balance_outlined,
-                    label: isBankVerified ? 'BANK VERIFIED' : 'VERIFY BANK',
-                    isVerified: isBankVerified,
-                  ),
-                ],
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, Routes.kycVerification),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildStatusBadge(
+                      icon: isKycVerified ? Icons.shield : Icons.shield_outlined,
+                      label: isKycVerified ? 'KYC VERIFIED' : 'VERIFY KYC',
+                      isVerified: isKycVerified,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildStatusBadge(
+                      icon: isBankVerified ? Icons.account_balance : Icons.account_balance_outlined,
+                      label: isBankVerified ? 'BANK VERIFIED' : 'VERIFY BANK',
+                      isVerified: isBankVerified,
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 32),
@@ -162,6 +165,8 @@ class _ProfileViewState extends State<ProfileView> {
                     _buildListItem(Icons.email, 'EMAIL ADDRESS', user.email),
                     const Divider(color: Colors.white12, height: 1),
                     _buildListItem(Icons.phone_android, 'MOBILE NUMBER', user.mblno),
+                    const Divider(color: Colors.white12, height: 1),
+                    _buildListItem(Icons.verified_user, 'KYC VERIFICATION', 'Check or update your status', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.kycVerification)),
                   ],
                 ),
               ),
