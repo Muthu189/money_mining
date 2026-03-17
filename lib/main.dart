@@ -39,9 +39,9 @@ class MoneyMiningApp extends StatelessWidget {
         ProxyProvider2<ApiClient, StorageService, AuthRepository>(
           update: (_, apiClient, storageService, __) => AuthRepository(apiClient, storageService),
         ),
-        ChangeNotifierProxyProvider<AuthRepository, AuthViewModel>(
-          create: (context) => AuthViewModel(context.read<AuthRepository>()), 
-          update: (_, authRepository, viewModel) => AuthViewModel(authRepository),
+        ChangeNotifierProxyProvider2<AuthRepository, StorageService, AuthViewModel>(
+          create: (context) => AuthViewModel(context.read<AuthRepository>(), context.read<StorageService>()), 
+          update: (_, authRepository, storageService, viewModel) => AuthViewModel(authRepository, storageService),
         ),
         ProxyProvider<ApiClient, KycRepository>(
            update: (_, apiClient, __) => KycRepository(apiClient),
@@ -53,10 +53,11 @@ class MoneyMiningApp extends StatelessWidget {
         ProxyProvider<ApiClient, ProfileRepository>(
           update: (_, apiClient, __) => ProfileRepository(apiClient),
         ),
-        ChangeNotifierProxyProvider<ProfileRepository, ProfileViewModel>(
-          create: (context) => ProfileViewModel(context.read<ProfileRepository>()),
-          update: (_, profileRepository, viewModel) => ProfileViewModel(profileRepository),
+        ChangeNotifierProxyProvider2<ProfileRepository, StorageService, ProfileViewModel>(
+          create: (context) => ProfileViewModel(context.read<ProfileRepository>(), context.read<StorageService>()),
+          update: (_, profileRepository, storageService, viewModel) => ProfileViewModel(profileRepository, storageService),
         ),
+
         ProxyProvider<ApiClient, PaymentRepository>(
           update: (_, apiClient, __) => PaymentRepository(apiClient),
         ),

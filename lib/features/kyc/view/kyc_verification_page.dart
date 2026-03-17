@@ -25,7 +25,9 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<KycViewModel>().fetchKycStatus();
+      final vm = context.read<KycViewModel>();
+      vm.fetchKycStatus();
+      vm.fetchBankList();
     });
   }
 
@@ -350,11 +352,10 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
 
     if (status == 1) {
       return _buildVerifiedSection(children: [
+        _buildInfoRow('Bank Name', viewModel.selectedBankName ?? ''),
         _buildInfoRow('Account Number', _maskAccount(detail.accNo)),
         const SizedBox(height: 8),
         _buildInfoRow('IFSC Code', detail.ifscCode ?? ''),
-        const SizedBox(height: 12),
-        _buildNetworkImageTile('Passbook / Cheque', detail.bankImage),
       ]);
     }
 
@@ -371,17 +372,64 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
 
     // Pending
     return _buildPendingSection(children: [
+      _buildInfoRow('Bank Name', viewModel.selectedBankName ?? ''),
       _buildInfoRow('Account Number', _maskAccount(detail.accNo)),
       const SizedBox(height: 8),
       _buildInfoRow('IFSC Code', detail.ifscCode ?? ''),
-      const SizedBox(height: 12),
-      _buildNetworkImageTile('Passbook / Cheque', detail.bankImage),
     ]);
   }
 
   Widget _buildBankUploadUI(KycViewModel viewModel) {
     return Column(
       children: [
+        // Bank Name Dropdown
+        if (viewModel.bankList.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'BANK NAME',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: AppColors.softWhite.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: viewModel.selectedBankName,
+                dropdownColor: AppColors.darkGray,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  hintText: 'Select Bank',
+                  filled: true,
+                  fillColor: AppColors.darkGray,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF333333)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF333333)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.luxuryGold),
+                  ),
+                ),
+                style: AppTextStyles.bodyLarge,
+                items: viewModel.bankList.map((bank) {
+                  return DropdownMenuItem<String>(
+                    value: bank,
+                    child: Text(bank, style: const TextStyle(color: Colors.white)),
+                  );
+                }).toList(),
+                onChanged: (value) => viewModel.setSelectedBankName(value),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         CustomTextField(
           controller: _accNoController,
           labelText: 'Account Number',
@@ -394,9 +442,6 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
           labelText: 'IFSC Code',
           hintText: 'Bank IFSC Code',
         ),
-        const SizedBox(height: 16),
-        _buildUploadBox('Upload Passbook / Cheque', viewModel.bankImage,
-            () => viewModel.pickImage('bank')),
       ],
     );
   }
@@ -433,12 +478,8 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
           _showSnack('Please upload Aadhaar front and back photos.', isError: true);
           return;
         }
-        if (detail.isPanRejected && viewModel.panImage == null) {
-          _showSnack('Please upload your PAN card photo.', isError: true);
-          return;
-        }
-        if (detail.isBankRejected && viewModel.bankImage == null) {
-          _showSnack('Please upload your passbook or cheque image.', isError: true);
+        if (detail.isBankRejected && viewModel.selectedBankName == null) {
+          _showSnack('Please select a bank name.', isError: true);
           return;
         }
 
@@ -447,6 +488,7 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
           panNumber: panNum,
           accNo: accNum,
           ifscCode: ifsc,
+          bankName: viewModel.selectedBankName ?? '',
         );
 
         if (mounted) {
@@ -507,6 +549,7 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
                   panNumber: _panController.text.trim(),
                   accNo: _accNoController.text.trim(),
                   ifscCode: _ifscController.text.trim(),
+                  bankName: viewModel.selectedBankName ?? '',
                 );
                 if (mounted) {
                   _showSnack(

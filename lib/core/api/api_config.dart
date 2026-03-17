@@ -1,6 +1,6 @@
 class ApiConfig {
   // Base URL provided by user
-  static const String baseUrl = 'https://werner-desertic-lorinda.ngrok-free.dev';
+  static const String baseUrl = 'https://api.moneymining.co.in';
 
   // Auth Endpoints
   static const String createAccount = '/users/createAccount';
@@ -36,4 +36,17 @@ class ApiConfig {
   static const String replyTicket = '/users/replyTicket';
   static const String userTicketList = '/users/userTicketList';
   static const String ticketDetails = '/users/ticketDetails';
+
+  // Forgot / Change Password
+  static const String forgotPassword = '/users/forgotPassword';
+  static const String changePassword = '/users/changePassword';
+
+  // Bank List
+  static const String getBankList = '/kyc/getBankList';
+
+  // Profile Image
+  static const String updateProfileImage = '/users/updateProfileImage';
+
+  // Security PIN
+  static const String updatePin = '/users/updatePin';
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/api/api_exception.dart';
 import '../data/auth_repository.dart';
+import '../../../core/storage/storage_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
+  final StorageService _storageService;
   
   bool _isLoading = false;
   String? _error;
@@ -15,7 +17,7 @@ class AuthViewModel extends ChangeNotifier {
   String? get successMessage => _successMessage;
   String? get tempToken => _tempToken;
 
-  AuthViewModel(this._authRepository);
+  AuthViewModel(this._authRepository, this._storageService);
 
   bool _isEmailVerified = false;
   bool _isMobileVerified = false;
@@ -206,6 +208,72 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final response = await _authRepository.verifyOtp(token: _tempToken!, otp: otp);
       _successMessage = response.message.isNotEmpty ? response.message : 'OTP verified successfully!';
+      
+      // Save PIN locally if it exists in the response
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data;
+        if (data['login_pin_status'] == 1 && data['login_pin'] != null) {
+          await _storageService.setAppPin(data['login_pin'].toString());
+        } else {
+          await _storageService.removeAppPin();
+        }
+      }
+
+      _setLoading(false);
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      _error = 'Something went wrong. Please try again.';
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // ─── Forgot Password ───
+
+  /// Step 1: Send OTP to email
+  Future<bool> sendForgotPasswordOtp(String email) async {
+    _setLoading(true);
+    _error = null;
+    _successMessage = null;
+    try {
+      final response = await _authRepository.forgotPassword(email: email, type: 1);
+      _successMessage = response.message.isNotEmpty ? response.message : 'OTP sent to email';
+      _setLoading(false);
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      _error = 'Something went wrong. Please try again.';
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Step 2: Verify OTP and reset password
+  Future<bool> verifyAndResetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    _setLoading(true);
+    _error = null;
+    _successMessage = null;
+    try {
+      final response = await _authRepository.forgotPassword(
+        email: email,
+        type: 2,
+        otp: otp,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+      _successMessage = response.message.isNotEmpty ? response.message : 'Password updated successfully';
       _setLoading(false);
       return true;
     } on ApiException catch (e) {
@@ -224,3 +292,4 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 }
+

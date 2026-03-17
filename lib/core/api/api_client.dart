@@ -13,8 +13,8 @@ class ApiClient {
       : _dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 45),
-      receiveTimeout: const Duration(seconds: 60),
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 120),
     ),
   ) {
     _dio.interceptors.add(
@@ -83,6 +83,33 @@ class ApiClient {
             debugPrint("====================================");
           }
 
+          if (response.data is Map<String, dynamic>) {
+            final status = response.data['status'];
+            if (status == 6) {
+              // Session expired -> logout
+              _logout();
+              return handler.reject(
+                DioException(
+                  requestOptions: response.requestOptions,
+                  response: response,
+                  error: ApiException(type: ApiErrorType.unauthorized, message: 'Session expired. Please login again.'),
+                  message: 'Session expired',
+                ),
+              );
+            } else if (status == 5) {
+              // Under maintenance
+              _showMaintenance();
+              return handler.reject(
+                DioException(
+                  requestOptions: response.requestOptions,
+                  response: response,
+                  error: ApiException(type: ApiErrorType.serverError, message: 'App is under maintenance.'),
+                  message: 'Under maintenance',
+                ),
+              );
+            }
+          }
+
           handler.next(response);
         },
 
@@ -126,6 +153,15 @@ class ApiClient {
     Future.microtask(() {
       Routes.navigatorKey.currentState?.pushNamedAndRemoveUntil(
         Routes.auth,
+        (route) => false,
+      );
+    });
+  }
+
+  void _showMaintenance() {
+    Future.microtask(() {
+      Routes.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        Routes.maintenance,
         (route) => false,
       );
     });

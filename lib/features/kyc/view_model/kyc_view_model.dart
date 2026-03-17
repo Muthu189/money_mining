@@ -16,7 +16,6 @@ class KycViewModel extends ChangeNotifier {
   File? _aadhaarFront;
   File? _aadhaarBack;
   File? _panImage;
-  File? _bankImage;
 
   // Parsed KYC data from API
   KycDetailModel? _kycDetail;
@@ -31,10 +30,21 @@ class KycViewModel extends ChangeNotifier {
   File? get aadhaarFront => _aadhaarFront;
   File? get aadhaarBack => _aadhaarBack;
   File? get panImage => _panImage;
-  File? get bankImage => _bankImage;
 
   String get kycStatus => _kycStatus;
   KycDetailModel? get kycDetail => _kycDetail;
+
+  // Bank list for spinner
+  List<String> _bankList = [];
+  String? _selectedBankName;
+
+  List<String> get bankList => _bankList;
+  String? get selectedBankName => _selectedBankName;
+
+  void setSelectedBankName(String? name) {
+    _selectedBankName = name;
+    notifyListeners();
+  }
 
   KycViewModel(this._kycRepository);
 
@@ -60,9 +70,6 @@ class KycViewModel extends ChangeNotifier {
         case 'pan':
           _panImage = file;
           break;
-        case 'bank':
-          _bankImage = file;
-          break;
       }
       notifyListeners();
     }
@@ -73,11 +80,11 @@ class KycViewModel extends ChangeNotifier {
     required String panNumber,
     required String accNo,
     required String ifscCode,
+    required String bankName,
   }) async {
     if (_aadhaarFront == null ||
         _aadhaarBack == null ||
-        _panImage == null ||
-        _bankImage == null) {
+        _panImage == null) {
       _error = 'Please upload all required documents';
       notifyListeners();
       return false;
@@ -86,8 +93,7 @@ class KycViewModel extends ChangeNotifier {
     // Check file sizes (2MB limit)
     if (!_isFileSizeValid(_aadhaarFront!) ||
         !_isFileSizeValid(_aadhaarBack!) ||
-        !_isFileSizeValid(_panImage!) ||
-        !_isFileSizeValid(_bankImage!)) {
+        !_isFileSizeValid(_panImage!)) {
       _error = 'One or more files exceed the 2MB size limit.';
       notifyListeners();
       return false;
@@ -101,7 +107,6 @@ class KycViewModel extends ChangeNotifier {
       final aadhaarFrontUrl = await _kycRepository.uploadImage(_aadhaarFront!);
       final aadhaarBackUrl = await _kycRepository.uploadImage(_aadhaarBack!);
       final panUrl = await _kycRepository.uploadImage(_panImage!);
-      final bankImageUrl = await _kycRepository.uploadImage(_bankImage!);
 
       // 2. Submit all Data together
       final response = await _kycRepository.saveKycAndBankDetails(
@@ -112,7 +117,7 @@ class KycViewModel extends ChangeNotifier {
         panUrl: panUrl,
         accNo: accNo,
         ifscCode: ifscCode,
-        bankImageUrl: bankImageUrl,
+        bankName: bankName,
       );
 
       _successMessage = response.message.isNotEmpty
@@ -170,8 +175,21 @@ class KycViewModel extends ChangeNotifier {
     }
   }
 
+  /// Fetch bank list for dropdown spinner
+  Future<void> fetchBankList() async {
+    try {
+      _bankList = await _kycRepository.fetchBankList();
+      notifyListeners();
+    } on ApiException catch (e) {
+      debugPrint('Error fetching bank list: ${e.message}');
+    } catch (e) {
+      debugPrint('Error fetching bank list: $e');
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 }
+

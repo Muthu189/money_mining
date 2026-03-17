@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -85,22 +86,27 @@ class _ProfileViewState extends State<ProfileView> {
                         BoxShadow(color: AppColors.luxuryGold.withOpacity(0.3), blurRadius: 20, spreadRadius: 2),
                       ],
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                      backgroundImage: (user.profileImg != null && user.profileImg!.isNotEmpty)
+                          ? NetworkImage(user.profileImg!)
+                          : const NetworkImage('https://i.pravatar.cc/150?img=11'),
                       backgroundColor: Colors.grey,
                     ),
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.luxuryGold,
-                        shape: BoxShape.circle,
+                    child: GestureDetector(
+                      onTap: () => _showImagePickerBottomSheet(context, model),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.luxuryGold,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt, color: AppColors.matteBlack, size: 16),
                       ),
-                      child: const Icon(Icons.camera_alt, color: AppColors.matteBlack, size: 16),
                     ),
                   ),
                 ],
@@ -119,7 +125,7 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isKycVerified && isBankVerified ? 'VERIFIED INVESTOR' : 'UNVERIFIED PROFILE',
+                    isKycVerified && isBankVerified ? 'VERIFIED PLATFORM' : 'UNVERIFIED PROFILE',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: isKycVerified && isBankVerified ? AppColors.luxuryGold : Colors.orange,
                       letterSpacing: 1.2,
@@ -238,31 +244,11 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
 
                     const Divider(color: Colors.white12, height: 1),
-                    _buildListItem(Icons.history, 'Change Password', '', showArrow: true),
+                    _buildListItem(Icons.history, 'Change Password', '', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.changePassword)),
                     const Divider(color: Colors.white12, height: 1),
 
                     // Security Dropdown
-                    _buildExpansionItem(
-                      Icons.security,
-                      'Security & Biometrics',
-                      'FaceID, 2FA, PIN',
-                      Column(
-                        children: [
-                          _buildToggleItem(Icons.fingerprint, 'Biometric Login', true),
-                          _buildToggleItem(Icons.lock, 'Two-Factor Auth', false),
-                          _buildToggleItem(Icons.dialpad, 'Transaction PIN', true),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                            child: OutlinedButton(
-                              onPressed: () {},
-                              style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.luxuryGold)),
-                              child: const Text('Change Transaction PIN', style: TextStyle(color: AppColors.luxuryGold)),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
+                    _buildListItem(Icons.security, 'Security & Biometrics', 'PIN, Fingerprint', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.security)),
 
                     const Divider(color: Colors.white12, height: 1),
                     _buildListItem(Icons.privacy_tip, 'Privacy Policy', '', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.terms)),
@@ -438,4 +424,99 @@ class _ProfileViewState extends State<ProfileView> {
   Widget buildGradientButton({required String text, required VoidCallback onPressed, required IconData icon}) {
     return GradientButton(text: text, onPressed: onPressed, icon: icon);
   }
+
+  void _showImagePickerBottomSheet(BuildContext context, ProfileViewModel model) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.darkGray,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Update Profile Photo', style: AppTextStyles.headlineMedium),
+              const SizedBox(height: 8),
+              Text('Choose a source', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildPickerOption(
+                    icon: Icons.camera_alt,
+                    label: 'Camera',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final success = await model.pickAndUploadProfileImage(ImageSource.camera);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(success
+                              ? (model.successMessage ?? 'Profile image updated')
+                              : (model.error ?? 'Upload failed')),
+                          backgroundColor: success ? AppColors.successGreen : AppColors.dangerRed,
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                      }
+                    },
+                  ),
+                  _buildPickerOption(
+                    icon: Icons.photo_library,
+                    label: 'Gallery',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final success = await model.pickAndUploadProfileImage(ImageSource.gallery);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(success
+                              ? (model.successMessage ?? 'Profile image updated')
+                              : (model.error ?? 'Upload failed')),
+                          backgroundColor: success ? AppColors.successGreen : AppColors.dangerRed,
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickerOption({required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.luxuryGold.withOpacity(0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.luxuryGold.withOpacity(0.3)),
+            ),
+            child: Icon(icon, color: AppColors.luxuryGold, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: AppTextStyles.bodyMedium),
+        ],
+      ),
+    );
+  }
 }
+

@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../routes.dart';
+import 'package:provider/provider.dart';
 import 'home_view.dart';
 import 'transactions_view.dart';
 import 'support_view.dart';
 import 'profile_view.dart';
+import '../view_model/transaction_view_model.dart';
+import '../../profile/view_model/profile_view_model.dart';
+import '../../kyc/view_model/kyc_view_model.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -74,7 +78,20 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           child: NavigationBar(
             selectedIndex: _currentIndex,
-            onDestinationSelected: (index) => setState(() => _currentIndex = index),
+            onDestinationSelected: (index) {
+              setState(() => _currentIndex = index);
+              
+              if (index == 0) { // Home
+                context.read<ProfileViewModel>().fetchUserInfo();
+                context.read<TransactionViewModel>().loadInitialData(3);
+                context.read<KycViewModel>().fetchKycStatus();
+              } else if (index == 1) { // Transactions
+                // Type 1 is deposit, which is the first tab shown in TransactionsView
+                context.read<TransactionViewModel>().loadInitialData(1);
+              } else if (index == 3) { // Profile
+                context.read<ProfileViewModel>().fetchUserInfo();
+              }
+            },
             destinations: [
               NavigationDestination(
                 icon: const Icon(Icons.home_outlined),

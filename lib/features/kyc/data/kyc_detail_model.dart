@@ -19,7 +19,6 @@ class KycDetailModel {
   // Bank
   final String? accNo;
   final String? ifscCode;
-  final String? bankImage;
   final int bankStatus; // 0=pending, 1=verified, 2=rejected
   final String? bankRejectReason;
 
@@ -42,7 +41,6 @@ class KycDetailModel {
     this.panRejectReason,
     this.accNo,
     this.ifscCode,
-    this.bankImage,
     this.bankStatus = 0,
     this.bankRejectReason,
     this.isKycVerified = 0,
@@ -64,8 +62,6 @@ class KycDetailModel {
       panStatus: _parseInt(map['pan_status']),
       panRejectReason: map['pan_reject_reason']?.toString(),
       accNo: map['acc_no']?.toString(),
-      ifscCode: map['ifsc_code']?.toString(),
-      bankImage: map['bank_image']?.toString(),
       bankStatus: _parseInt(map['bank_status']),
       bankRejectReason: map['bank_reject_reason']?.toString(),
       isKycVerified: _parseInt(map['is_kyc_verified']),

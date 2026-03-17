@@ -15,8 +15,11 @@ import 'features/auth/view/forgot_password_page.dart';
 import 'features/notifications/view/notification_center_page.dart';
 import 'features/referral/view/referral_page.dart';
 import 'features/profile/view/security_page.dart';
+import 'features/profile/view/change_password_page.dart';
 import 'features/legal/view/terms_conditions_page.dart';
 import 'features/auth/view/otp_verification_page.dart';
+import 'features/splash/view/maintenance_page.dart';
+import 'features/auth/view/app_lock_page.dart';
 
 class Routes {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -37,7 +40,10 @@ class Routes {
   static const String withdrawalTracking = '/withdrawal_tracking';
   static const String referral = '/referral';
   static const String security = '/security';
+  static const String changePassword = '/change_password';
   static const String terms = '/terms';
+  static const String maintenance = '/maintenance';
+  static const String appLock = '/app_lock';
 
   static Map<String, WidgetBuilder> getRoutes(BuildContext context) {
     return {
@@ -57,8 +63,11 @@ class Routes {
       withdrawalTracking: (context) => const WithdrawalTrackingPage(),
       referral: (context) => const ReferralPage(),
       security: (context) => const SecurityPage(),
+      changePassword: (context) => const ChangePasswordPage(),
       terms: (context) => const TermsConditionsPage(),
       otpVerification: (context) => const OtpVerificationPage(),
+      maintenance: (context) => const MaintenancePage(),
+      appLock: (context) => const AppLockPage(),
     };
   }
 }

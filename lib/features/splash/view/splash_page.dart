@@ -45,7 +45,15 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
       if (mounted) {
         if (isLoggedIn) {
-          Navigator.pushReplacementNamed(context, Routes.dashboard);
+          final isFingerprintEnabled = await storageService.isFingerprintEnabled();
+          final appPin = await storageService.getAppPin();
+          final hasLockEnabled = isFingerprintEnabled || (appPin != null && appPin.isNotEmpty);
+
+          if (hasLockEnabled) {
+             Navigator.pushReplacementNamed(context, Routes.appLock);
+          } else {
+             Navigator.pushReplacementNamed(context, Routes.dashboard);
+          }
         } else if (isOnboardingComplete) {
           Navigator.pushReplacementNamed(context, Routes.auth);
         } else {

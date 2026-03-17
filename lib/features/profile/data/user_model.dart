@@ -23,6 +23,13 @@ class UserModel {
   final double totalRoi;
   final double todayRoi;
 
+  // Profile image
+  final String? profileImg;
+
+  // Security PIN
+  final int loginPinStatus;
+  final int? loginPin;
+
   UserModel({
     required this.id,
     required this.username,
@@ -42,6 +49,9 @@ class UserModel {
     required this.todayRefRoi,
     required this.totalRoi,
     required this.todayRoi,
+    this.profileImg,
+    this.loginPinStatus = 0,
+    this.loginPin,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -74,6 +84,10 @@ class UserModel {
 
       totalRoi: parseDouble(json['TOTAL_ROI']),
       todayRoi: parseDouble(json['TODAY_ROI']),
+
+      profileImg: json['profile_img']?.toString(),
+      loginPinStatus: json['login_pin_status'] ?? 0,
+      loginPin: json['login_pin'] is int ? json['login_pin'] : null,
     );
   }
 
@@ -97,6 +111,9 @@ class UserModel {
       'today_ref_roi': todayRefRoi,
       'TOTAL_ROI': totalRoi,
       'TODAY_ROI': todayRoi,
+      'profile_img': profileImg,
+      'login_pin_status': loginPinStatus,
+      'login_pin': loginPin,
     };
   }
 }

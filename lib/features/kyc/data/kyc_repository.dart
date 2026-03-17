@@ -52,7 +52,7 @@ class KycRepository {
     required String panUrl,
     required String accNo,
     required String ifscCode,
-    required String bankImageUrl,
+    required String bankName,
   }) async {
     try {
       final body = {
@@ -63,7 +63,7 @@ class KycRepository {
         'pan_image': panUrl,
         'acc_no': accNo,
         'ifsc_code': ifscCode,
-        'bank_image': bankImageUrl,
+        'bank_name': bankName,
       };
 
       debugPrint("Submitting KYC Body: $body");
@@ -106,6 +106,30 @@ class KycRepository {
           : ApiException.fromDioException(e);
     } catch (e) {
       if (e is ApiException) rethrow;
+      throw ApiException(
+        type: ApiErrorType.unknown,
+        message: 'Something went wrong. Please try again.',
+      );
+    }
+  }
+
+  /// Fetch list of bank names
+  Future<List<String>> fetchBankList() async {
+    try {
+      final response = await _apiClient.dio.post(ApiConfig.getBankList);
+      final apiResponse = ApiResponse.fromResponse(response);
+      if (!apiResponse.isSuccess) {
+        throw ApiException.fromApiResponse(apiResponse);
+      }
+      final List data = apiResponse.data ?? [];
+      return data.map<String>((item) => item['bank_name']?.toString() ?? '').where((name) => name.isNotEmpty).toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw (e.error is ApiException)
+          ? e.error as ApiException
+          : ApiException.fromDioException(e);
+    } catch (e) {
       throw ApiException(
         type: ApiErrorType.unknown,
         message: 'Something went wrong. Please try again.',

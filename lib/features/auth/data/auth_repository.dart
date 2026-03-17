@@ -201,4 +201,44 @@ class AuthRepository {
       );
     }
   }
+
+  /// Forgot Password
+  /// type=1 → send OTP to email
+  /// type=2 → verify OTP + reset password
+  Future<ApiResponse> forgotPassword({
+    required String email,
+    required int type,
+    String? otp,
+    String? newPassword,
+    String? confirmPassword,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'type': type,
+      };
+      if (type == 2) {
+        body['otp'] = otp;
+        body['new_password'] = newPassword;
+        body['confirm_password'] = confirmPassword;
+      }
+      final response = await _apiClient.dio.post(ApiConfig.forgotPassword, data: body);
+      final apiResponse = ApiResponse.fromResponse(response);
+      if (!apiResponse.isSuccess) {
+        throw ApiException.fromApiResponse(apiResponse);
+      }
+      return apiResponse;
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw (e.error is ApiException)
+          ? e.error as ApiException
+          : ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(
+        type: ApiErrorType.unknown,
+        message: 'Something went wrong. Please try again.',
+      );
+    }
+  }
 }
