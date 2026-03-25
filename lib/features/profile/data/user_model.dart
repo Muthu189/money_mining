@@ -25,6 +25,7 @@ class UserModel {
 
   // Profile image
   final String? profileImg;
+  final String? bankImage;
 
   // Security PIN
   final int loginPinStatus;
@@ -50,6 +51,7 @@ class UserModel {
     required this.totalRoi,
     required this.todayRoi,
     this.profileImg,
+    this.bankImage,
     this.loginPinStatus = 0,
     this.loginPin,
   });
@@ -85,6 +87,7 @@ class UserModel {
       totalRoi: parseDouble(json['TOTAL_ROI']),
       todayRoi: parseDouble(json['TODAY_ROI']),
 
+      bankImage: json['bank_image']?.toString(),
       profileImg: json['profile_img']?.toString(),
       loginPinStatus: json['login_pin_status'] ?? 0,
       loginPin: json['login_pin'] is int ? json['login_pin'] : null,
@@ -112,6 +115,7 @@ class UserModel {
       'TOTAL_ROI': totalRoi,
       'TODAY_ROI': todayRoi,
       'profile_img': profileImg,
+      'bank_image': bankImage,
       'login_pin_status': loginPinStatus,
       'login_pin': loginPin,
     };

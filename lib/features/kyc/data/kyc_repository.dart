@@ -53,6 +53,7 @@ class KycRepository {
     required String accNo,
     required String ifscCode,
     required String bankName,
+    required String bankImageUrl,
   }) async {
     try {
       final body = {
@@ -64,6 +65,7 @@ class KycRepository {
         'acc_no': accNo,
         'ifsc_code': ifscCode,
         'bank_name': bankName,
+        'bank_image': bankImageUrl,
       };
 
       debugPrint("Submitting KYC Body: $body");

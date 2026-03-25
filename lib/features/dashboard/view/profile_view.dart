@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -88,10 +90,37 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: (user.profileImg != null && user.profileImg!.isNotEmpty)
-                          ? NetworkImage(user.profileImg!)
-                          : const NetworkImage('https://i.pravatar.cc/150?img=11'),
-                      backgroundColor: Colors.grey,
+                      backgroundColor: AppColors.darkGray,
+                      child: ClipOval(
+                        child: (user.profileImg != null && user.profileImg!.isNotEmpty)
+                            ? Image.network(
+                                user.profileImg!,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Image.asset(
+                                  'assets/images/logo_new.png',
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.luxuryGold,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.asset(
+                                'assets/images/logo_new.png',
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -172,7 +201,18 @@ class _ProfileViewState extends State<ProfileView> {
                     const Divider(color: Colors.white12, height: 1),
                     _buildListItem(Icons.phone_android, 'MOBILE NUMBER', user.mblno),
                     const Divider(color: Colors.white12, height: 1),
-                    _buildListItem(Icons.verified_user, 'KYC VERIFICATION', 'Check or update your status', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.kycVerification)),
+                    _buildListItem(
+                      Icons.account_balance,
+                      'BANK PASSBOOK / CHEQUE',
+                      user.bankImage != null && user.bankImage!.isNotEmpty ? 'View Uploaded Document' : 'Not Uploaded',
+                      showArrow: user.bankImage != null && user.bankImage!.isNotEmpty,
+                      onTap: user.bankImage != null && user.bankImage!.isNotEmpty
+                          ? () => _showBankImageDialog(context, user.bankImage!)
+                          : null,
+                    ),
+                    const Divider(color: Colors.white12, height: 1),
+                    _buildListItem(Icons.verified_user, 'KYC VERIFICATION', 'Check or update your status',
+                        showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.kycVerification)),
                   ],
                 ),
               ),
@@ -228,12 +268,42 @@ class _ProfileViewState extends State<ProfileView> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               ElevatedButton.icon(
-                                onPressed: () {},
+                                onPressed: () {
+                                  final message =
+                                      'Join MoneyMining & earn Gold Rewards! 🏆\n'
+                                      'Use my referral code: *${user.referralCode}*\n\n'
+                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.example.money_mining';
+                                  Share.share(message, subject: 'MoneyMining Referral Code');
+                                },
                                 icon: const Icon(Icons.share, size: 16),
-                                label: const Text('Share Code'),
+                                label: const Text('Share'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.luxuryGold,
                                   foregroundColor: AppColors.matteBlack,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final message =
+                                      'Join MoneyMining & earn Gold Rewards! 🏆\n'
+                                      'Use my referral code: *${user.referralCode}*\n\n'
+                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.example.money_mining';
+                                  Clipboard.setData(ClipboardData(text: message));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Referral link copied!'),
+                                      backgroundColor: AppColors.successGreen,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.copy, size: 16),
+                                label: const Text('Copy'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.darkGray,
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: AppColors.luxuryGold),
                                 ),
                               ),
                             ],
@@ -251,7 +321,9 @@ class _ProfileViewState extends State<ProfileView> {
                     _buildListItem(Icons.security, 'Security & Biometrics', 'PIN, Fingerprint', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.security)),
 
                     const Divider(color: Colors.white12, height: 1),
-                    _buildListItem(Icons.privacy_tip, 'Privacy Policy', '', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.terms)),
+                    _buildListItem(Icons.privacy_tip, 'Privacy Policy', '', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.privacyPolicy)),
+                    const Divider(color: Colors.white12, height: 1),
+                    _buildListItem(Icons.gavel, 'Terms & Conditions', '', showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.terms)),
                   ],
                 ),
               ),
@@ -515,6 +587,69 @@ class _ProfileViewState extends State<ProfileView> {
           const SizedBox(height: 8),
           Text(label, style: AppTextStyles.bodyMedium),
         ],
+      ),
+    );
+  }
+
+  void _showBankImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.luxuryGold.withOpacity(0.3)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 300,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(color: AppColors.luxuryGold),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(color: AppColors.darkGray),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, color: Colors.white24, size: 50),
+                          SizedBox(height: 8),
+                          Text('Failed to load image', style: TextStyle(color: Colors.white54)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'BANK PASSBOOK / CHEQUE',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.luxuryGold, letterSpacing: 1.2),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -49,4 +49,8 @@ class ApiConfig {
 
   // Security PIN
   static const String updatePin = '/users/updatePin';
+
+  // Support Contact Details
+  static const String supportEmail = 'moneyminingindia@gmail.com';
+  static const String supportPhone = '7449003060';
 }

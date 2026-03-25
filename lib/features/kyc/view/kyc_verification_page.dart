@@ -352,10 +352,12 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
 
     if (status == 1) {
       return _buildVerifiedSection(children: [
-        _buildInfoRow('Bank Name', viewModel.selectedBankName ?? ''),
+        _buildInfoRow('Bank Name', detail.bankName ?? viewModel.selectedBankName ?? ''),
         _buildInfoRow('Account Number', _maskAccount(detail.accNo)),
         const SizedBox(height: 8),
         _buildInfoRow('IFSC Code', detail.ifscCode ?? ''),
+        const SizedBox(height: 12),
+        _buildNetworkImageTile('Passbook / Cheque', detail.bankImage),
       ]);
     }
 
@@ -372,10 +374,12 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
 
     // Pending
     return _buildPendingSection(children: [
-      _buildInfoRow('Bank Name', viewModel.selectedBankName ?? ''),
+      _buildInfoRow('Bank Name', detail.bankName ?? viewModel.selectedBankName ?? ''),
       _buildInfoRow('Account Number', _maskAccount(detail.accNo)),
       const SizedBox(height: 8),
       _buildInfoRow('IFSC Code', detail.ifscCode ?? ''),
+      const SizedBox(height: 12),
+      _buildNetworkImageTile('Passbook / Cheque', detail.bankImage),
     ]);
   }
 
@@ -442,6 +446,10 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
           labelText: 'IFSC Code',
           hintText: 'Bank IFSC Code',
         ),
+
+        const SizedBox(height: 16),
+        _buildUploadBox('Upload Passbook / Cheque', viewModel.bankImage,
+                () => viewModel.pickImage('bank')),
       ],
     );
   }

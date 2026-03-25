@@ -20,6 +20,7 @@ import 'features/legal/view/terms_conditions_page.dart';
 import 'features/auth/view/otp_verification_page.dart';
 import 'features/splash/view/maintenance_page.dart';
 import 'features/auth/view/app_lock_page.dart';
+import 'features/legal/view/privacy_policy_page.dart';
 
 class Routes {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -42,6 +43,7 @@ class Routes {
   static const String security = '/security';
   static const String changePassword = '/change_password';
   static const String terms = '/terms';
+  static const String privacyPolicy = '/privacy_policy';
   static const String maintenance = '/maintenance';
   static const String appLock = '/app_lock';
 
@@ -65,6 +67,7 @@ class Routes {
       security: (context) => const SecurityPage(),
       changePassword: (context) => const ChangePasswordPage(),
       terms: (context) => const TermsConditionsPage(),
+      privacyPolicy: (context) => const PrivacyPolicyPage(),
       otpVerification: (context) => const OtpVerificationPage(),
       maintenance: (context) => const MaintenancePage(),
       appLock: (context) => const AppLockPage(),

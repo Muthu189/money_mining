@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:money_mining/features/profile/data/user_model.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -83,7 +84,7 @@ class _HomeViewState extends State<HomeView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              _buildHeader(context, user.username),
+              _buildHeader(context, user),
 
               const SizedBox(height: 24),
 
@@ -248,7 +249,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String username) {
+  Widget _buildHeader(BuildContext context, UserModel user) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -263,10 +264,38 @@ class _HomeViewState extends State<HomeView> {
                   border:
                   Border.all(color: AppColors.luxuryGold, width: 1.5),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 20,
-                  backgroundImage:
-                  NetworkImage('https://i.pravatar.cc/150?img=11'),
+                    child: ClipOval(
+                      child: (user.profileImg != null && user.profileImg!.isNotEmpty)
+                          ?  Image.network(
+                        user.profileImg!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Image.asset(
+                          'assets/images/logo_new.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.luxuryGold,
+                            ),
+                          );
+                        },
+                      )
+                          :  Image.asset(
+                        'assets/images/logo_new.png',
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -276,7 +305,7 @@ class _HomeViewState extends State<HomeView> {
                   const Text('WELCOME BACK',
                       style:
                       TextStyle(color: Colors.white54, fontSize: 10)),
-                  Text('Hi, ${username[0].toUpperCase()}${username.substring(1)}',
+                  Text('Hi, ${user.username[0].toUpperCase()}${user.username.substring(1)}',
                       style: AppTextStyles.headlineMedium.copyWith(
                           fontSize: 20, color: Colors.white)),
                 ],

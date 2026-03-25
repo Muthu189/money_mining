@@ -1,10 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 
 class ReferralPage extends StatelessWidget {
-  const ReferralPage({super.key});
+  final String referralCode;
+  const ReferralPage({super.key, this.referralCode = 'MINER777'});
+
+  static const String _playStorePackage = 'com.example.money_mining';
+  static const String _playStoreUrl =
+      'https://play.google.com/store/apps/details?id=$_playStorePackage';
+
+  String get _shareMessage =>
+      'Join MoneyMining & earn Gold Rewards! 🏆\n'
+      'Use my referral code: *$referralCode*\n\n'
+      '📲 Download the app: $_playStoreUrl';
+
+  void _shareCode(BuildContext context) {
+    Share.share(_shareMessage, subject: 'MoneyMining Referral Code');
+  }
+
+  void _copyCode(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: _shareMessage));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Referral link copied to clipboard!'),
+        backgroundColor: AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +59,7 @@ class ReferralPage extends StatelessWidget {
                     end: Alignment.bottomCenter,
                   )
                 ),
-                child: const Icon(Icons.card_giftcard, size: 120, color: AppColors.luxuryGold), // Placeholder
+                child: const Icon(Icons.card_giftcard, size: 120, color: AppColors.luxuryGold),
               ),
               
               const SizedBox(height: 24),
@@ -68,22 +95,30 @@ class ReferralPage extends StatelessWidget {
                          children: [
                            Text('YOUR UNIQUE CODE', style: AppTextStyles.bodySmall.copyWith(letterSpacing: 1.5)),
                            const SizedBox(height: 8),
-                           Text('MINER777', style: AppTextStyles.displayLarge.copyWith(fontSize: 28, color: AppColors.luxuryGold)),
+                           Text(referralCode, style: AppTextStyles.displayLarge.copyWith(fontSize: 28, color: AppColors.luxuryGold)),
                            const SizedBox(height: 16),
-                           GradientButton(text: 'Copy Code', onPressed: (){}, icon: Icons.copy, height: 40),
+                           GradientButton(
+                             text: 'Copy Code',
+                             onPressed: () => _copyCode(context),
+                             icon: Icons.copy,
+                             height: 40,
+                           ),
                          ],
                        ),
                      ),
                      const SizedBox(width: 24),
                      // QR Code Placeholder
-                     Container(
-                       width: 80, height: 80,
-                       decoration: BoxDecoration(
-                         border: Border.all(color: AppColors.luxuryGold.withValues(alpha: 0.3)),
-                         borderRadius: BorderRadius.circular(8),
-                         color: Colors.black,
+                     GestureDetector(
+                       onTap: () => _shareCode(context),
+                       child: Container(
+                         width: 80, height: 80,
+                         decoration: BoxDecoration(
+                           border: Border.all(color: AppColors.luxuryGold.withValues(alpha: 0.3)),
+                           borderRadius: BorderRadius.circular(8),
+                           color: Colors.black,
+                         ),
+                         child: const Icon(Icons.qr_code_2, size: 50, color: AppColors.luxuryGold),
                        ),
-                       child: const Icon(Icons.qr_code_2, size: 50, color: AppColors.luxuryGold),
                      ),
                    ],
                  ),
@@ -96,13 +131,13 @@ class ReferralPage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   _buildShareButton(Icons.send, 'Telegram'),
+                   _buildShareButton(context, Icons.send, 'Telegram'),
                    const SizedBox(width: 24),
-                   _buildShareButton(Icons.chat_bubble, 'WhatsApp'),
+                   _buildShareButton(context, Icons.chat_bubble, 'WhatsApp'),
                    const SizedBox(width: 24),
-                   _buildShareButton(Icons.email, 'Email'),
+                   _buildShareButton(context, Icons.email, 'Email'),
                    const SizedBox(width: 24),
-                   _buildShareButton(Icons.more_horiz, 'More'),
+                   _buildShareButton(context, Icons.more_horiz, 'More'),
                 ],
               ),
               
@@ -139,21 +174,24 @@ class ReferralPage extends StatelessWidget {
     );
   }
   
-  Widget _buildShareButton(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          width: 50, height: 50,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.luxuryGold.withOpacity(0.5)),
-            color: Colors.black,
+  Widget _buildShareButton(BuildContext context, IconData icon, String label) {
+    return GestureDetector(
+      onTap: () => _shareCode(context),
+      child: Column(
+        children: [
+          Container(
+            width: 50, height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.luxuryGold.withOpacity(0.5)),
+              color: Colors.black,
+            ),
+            child: Icon(icon, color: AppColors.luxuryGold, size: 24),
           ),
-          child: Icon(icon, color: AppColors.luxuryGold, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-      ],
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+        ],
+      ),
     );
   }
 
@@ -169,7 +207,7 @@ class ReferralPage extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: isEarned ? AppColors.luxuryGold : Colors.white10,
-            backgroundImage: null, // Initials for now
+            backgroundImage: null,
             child: Text(name.substring(0, 2).toUpperCase(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
           ),
           const SizedBox(width: 16),
