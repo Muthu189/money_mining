@@ -56,6 +56,7 @@ class UserModel {
     this.loginPin,
   });
 
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     double parseDouble(dynamic value) {
       if (value is num) return value.toDouble();
