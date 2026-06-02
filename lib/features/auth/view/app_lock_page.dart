@@ -101,80 +101,83 @@ class _AppLockPageState extends State<AppLockPage> {
       return const Scaffold(backgroundColor: AppColors.matteBlack);
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.matteBlack,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(),
-            const Icon(Icons.lock_outline, size: 48, color: AppColors.luxuryGold),
-            const SizedBox(height: 16),
-            const Text('Enter App PIN', style: AppTextStyles.headlineMedium),
-            const SizedBox(height: 8),
-            Text(
-              _isError ? 'Incorrect PIN, try again' : 'Enter your 4-digit PIN',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: _isError ? AppColors.dangerRed : Colors.white54,
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+        backgroundColor: AppColors.matteBlack,
+        body: SafeArea(
+          child: Column(
+            children: [
+              const Spacer(),
+              const Icon(Icons.lock_outline, size: 48, color: AppColors.luxuryGold),
+              const SizedBox(height: 16),
+              const Text('Enter App PIN', style: AppTextStyles.headlineMedium),
+              const SizedBox(height: 8),
+              Text(
+                _isError ? 'Incorrect PIN, try again' : 'Enter your 4-digit PIN',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: _isError ? AppColors.dangerRed : Colors.white54,
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            
-            // PIN Dots
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: index < _enteredPin.length 
-                        ? AppColors.luxuryGold 
-                        : AppColors.darkGray,
-                    border: Border.all(
+              const SizedBox(height: 40),
+              
+              // PIN Dots
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       color: index < _enteredPin.length 
                           ? AppColors.luxuryGold 
-                          : Colors.white24,
-                    ),
-                  ),
-                );
-              }),
-            ),
-            
-            const Spacer(),
-            
-            // Keypad
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                children: [
-                  for (var i = 0; i < 3; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          for (var j = 1; j <= 3; j++)
-                            _buildKey((i * 3 + j).toString(), () => _onKeyPress((i * 3 + j).toString())),
-                        ],
+                          : AppColors.darkGray,
+                      border: Border.all(
+                        color: index < _enteredPin.length 
+                            ? AppColors.luxuryGold 
+                            : Colors.white24,
                       ),
                     ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _isFingerprintEnabled
-                        ? _buildActionKey(Icons.fingerprint, _promptFingerprint)
-                        : const SizedBox(width: 72, height: 72),
-                      _buildKey('0', () => _onKeyPress('0')),
-                      _buildActionKey(Icons.backspace_outlined, _onBackspace),
-                    ],
-                  ),
-                ],
+                  );
+                }),
               ),
-            ),
-            const SizedBox(height: 48),
-          ],
+              
+              const Spacer(),
+              
+              // Keypad
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            for (var j = 1; j <= 3; j++)
+                              _buildKey((i * 3 + j).toString(), () => _onKeyPress((i * 3 + j).toString())),
+                          ],
+                        ),
+                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _isFingerprintEnabled
+                          ? _buildActionKey(Icons.fingerprint, _promptFingerprint)
+                          : const SizedBox(width: 72, height: 72),
+                        _buildKey('0', () => _onKeyPress('0')),
+                        _buildActionKey(Icons.backspace_outlined, _onBackspace),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
+            ],
+          ),
         ),
       ),
     );

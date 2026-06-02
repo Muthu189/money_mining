@@ -232,50 +232,69 @@ class _TransactionListState extends State<_TransactionList> {
 
         /// ERROR
         if (state.error != null && state.transactions.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 64),
-                const SizedBox(height: 16),
-                const Text('Oops! Something went wrong', style: AppTextStyles.headlineMedium),
-                const SizedBox(height: 8),
-                Text(state.error!,
-                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54), textAlign: TextAlign.center),
-                const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: () => viewModel.loadInitialData(widget.apiType),
-                  icon: const Icon(Icons.refresh, color: AppColors.matteBlack, size: 18),
-                  label: const Text('Try Again', style: TextStyle(color: AppColors.matteBlack, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.luxuryGold,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                )
-              ],
+          return RefreshIndicator(
+            color: AppColors.luxuryGold,
+            onRefresh: () => viewModel.refreshData(widget.apiType),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 64),
+                    const SizedBox(height: 16),
+                    const Text('Oops! Something went wrong', style: AppTextStyles.headlineMedium),
+                    const SizedBox(height: 8),
+                    Text(state.error!,
+                        style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54), textAlign: TextAlign.center),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () => viewModel.loadInitialData(widget.apiType),
+                      icon: const Icon(Icons.refresh, color: AppColors.matteBlack, size: 18),
+                      label: const Text('Try Again', style: TextStyle(color: AppColors.matteBlack, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.luxuryGold,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    )
+                  ],
+                ),
+              ),
             ),
           );
         }
 
         /// EMPTY
         if (state.transactions.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.receipt_long_outlined, color: Colors.white24, size: 64),
-                const SizedBox(height: 16),
-                Text(
-                  'No transactions found',
-                  style: AppTextStyles.headlineMedium.copyWith(color: Colors.white),
+          return RefreshIndicator(
+            color: AppColors.luxuryGold,
+            onRefresh: () => viewModel.refreshData(widget.apiType),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.receipt_long_outlined, color: Colors.white24, size: 64),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No transactions found',
+                      style: AppTextStyles.headlineMedium.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your transaction history will appear here',
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your transaction history will appear here',
-                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54),
-                ),
-              ],
-            )
+              ),
+            ),
           );
         }
 
@@ -283,6 +302,7 @@ class _TransactionListState extends State<_TransactionList> {
           color: AppColors.luxuryGold,
           onRefresh: () => viewModel.refreshData(widget.apiType),
           child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             controller: _scrollController,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             itemCount:
@@ -308,9 +328,12 @@ class _TransactionListState extends State<_TransactionList> {
     );
   }
 
-  String _formatDate(String isoDate) {
+  String _formatDate(String isoDate, [bool dateOnly = false]) {
     try {
       final date = DateTime.parse(isoDate).toLocal();
+      if (dateOnly) {
+        return DateFormat('MMM dd, yyyy').format(date);
+      }
       return DateFormat('MMM dd, yyyy • hh:mm a').format(date);
     } catch (e) {
       return isoDate;
@@ -319,46 +342,148 @@ class _TransactionListState extends State<_TransactionList> {
 
   Widget _buildTransactionItem(transaction) {
     final isCredit = transaction.isCredit;
-
     final amountPrefix = isCredit ? '+' : '-';
+    final amountString = '$amountPrefix₹ ${transaction.amount.toStringAsFixed(2)}';
+    final amountColor = isCredit ? AppColors.successGreen : Colors.redAccent;
 
-    final amountString =
-        '$amountPrefix₹ ${transaction.amount.toStringAsFixed(2)}';
+    // Status badge colour
+    Color statusColor;
+    if (transaction.isStatusSuccess) {
+      statusColor = AppColors.successGreen;
+    } else if (transaction.isStatusPending) {
+      statusColor = Colors.amber;
+    } else {
+      statusColor = Colors.redAccent;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.darkGray.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.darkGray.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white10),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isCredit ? Icons.call_received : Icons.call_made,
-            color: isCredit ? AppColors.successGreen : Colors.redAccent,
+          // ── Top row: icon + title + status badge ──────────
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: amountColor.withOpacity(0.12),
+                ),
+                child: Icon(
+                  isCredit ? Icons.call_received_rounded : Icons.call_made_rounded,
+                  color: amountColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.title,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      _formatDate(transaction.date, transaction.title.toLowerCase() == 'daily roi'),
+                      style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white38, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  transaction.statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(amountString,
-                    style: AppTextStyles.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(transaction.title,
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: Colors.white70)),
-                Text(_formatDate(transaction.date),
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: Colors.white38, fontSize: 10)),
-              ],
-            ),
-          )
+
+          const SizedBox(height: 12),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 12),
+
+          // ── Amount ────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Amount', style: AppTextStyles.bodySmall.copyWith(color: Colors.white38)),
+              Text(
+                amountString,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: amountColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Deposit-specific extras ───────────────────────
+          if (transaction.utrId != null && transaction.utrId!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow('UTR ID', transaction.utrId!),
+          ],
+          if (transaction.orderId != null && transaction.orderId!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow('Order ID', transaction.orderId!),
+          ],
+
+          // ── Withdraw-specific extras ──────────────────────
+          if (transaction.referenceId != null && transaction.referenceId!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow('Reference ID', transaction.referenceId!),
+          ],
+          if (transaction.transactionId != null && transaction.transactionId!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow('Transaction ID', transaction.transactionId!),
+          ],
+          if (transaction.adminRemarks != null && transaction.adminRemarks!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow('Remarks', transaction.adminRemarks!),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: AppTextStyles.bodySmall.copyWith(color: Colors.white38)),
+        Flexible(
+          child: Text(
+            value,
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white70),
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

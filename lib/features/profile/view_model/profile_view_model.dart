@@ -41,6 +41,17 @@ class ProfileViewModel extends ChangeNotifier {
     _error = null;
     try {
       _user = await _profileRepository.fetchUserInfo();
+      
+      // Sync PIN to local storage
+      if (_user != null) {
+        if (_user!.loginPinStatus == 1 && _user!.loginPin != null) {
+          final pinStr = _user!.loginPin.toString().padLeft(4, '0');
+          await _storageService.setAppPin(pinStr);
+        } else {
+          await _storageService.removeAppPin();
+        }
+      }
+
       // Also load fingerprint preference
       await _loadFingerprintStatus();
     } on ApiException catch (e) {

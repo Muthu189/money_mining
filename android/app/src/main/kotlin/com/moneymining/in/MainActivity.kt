@@ -1,4 +1,4 @@
-package com.example.money_mining
+package com.moneymining.`in`
 
 import io.flutter.embedding.android.FlutterActivity
 

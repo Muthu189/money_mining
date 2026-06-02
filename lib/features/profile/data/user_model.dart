@@ -90,7 +90,7 @@ class UserModel {
       bankImage: json['bank_image']?.toString(),
       profileImg: json['profile_img']?.toString(),
       loginPinStatus: json['login_pin_status'] ?? 0,
-      loginPin: json['login_pin'] is int ? json['login_pin'] : null,
+      loginPin: json['login_pin'] != null ? int.tryParse(json['login_pin'].toString()) : null,
     );
   }
 

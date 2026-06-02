@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
 import '../../profile/view_model/profile_view_model.dart';
+import '../../../core/storage/storage_service.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -61,9 +62,15 @@ class _ProfileViewState extends State<ProfileView> {
         final bool isKycVerified = user.isKycVerified == 1;
         final bool isBankVerified = user.isBankVerified == 1;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
+        return RefreshIndicator(
+          color: AppColors.luxuryGold,
+          onRefresh: () async {
+            await context.read<ProfileViewModel>().fetchUserInfo();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
             children: [
               Row(
                 children: [
@@ -200,16 +207,16 @@ class _ProfileViewState extends State<ProfileView> {
                     _buildListItem(Icons.email, 'EMAIL ADDRESS', user.email),
                     const Divider(color: Colors.white12, height: 1),
                     _buildListItem(Icons.phone_android, 'MOBILE NUMBER', user.mblno),
-                    const Divider(color: Colors.white12, height: 1),
-                    _buildListItem(
-                      Icons.account_balance,
-                      'BANK PASSBOOK / CHEQUE',
-                      user.bankImage != null && user.bankImage!.isNotEmpty ? 'View Uploaded Document' : 'Not Uploaded',
-                      showArrow: user.bankImage != null && user.bankImage!.isNotEmpty,
-                      onTap: user.bankImage != null && user.bankImage!.isNotEmpty
-                          ? () => _showBankImageDialog(context, user.bankImage!)
-                          : null,
-                    ),
+                    // const Divider(color: Colors.white12, height: 1),
+                    // _buildListItem(
+                    //   Icons.account_balance,
+                    //   'BANK PASSBOOK / CHEQUE',
+                    //   user.bankImage != null && user.bankImage!.isNotEmpty ? 'View Uploaded Document' : 'Not Uploaded',
+                    //   showArrow: user.bankImage != null && user.bankImage!.isNotEmpty,
+                    //   onTap: user.bankImage != null && user.bankImage!.isNotEmpty
+                    //       ? () => _showBankImageDialog(context, user.bankImage!)
+                    //       : null,
+                    // ),
                     const Divider(color: Colors.white12, height: 1),
                     _buildListItem(Icons.verified_user, 'KYC VERIFICATION', 'Check or update your status',
                         showArrow: true, onTap: () => Navigator.pushNamed(context, Routes.kycVerification)),
@@ -272,7 +279,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   final message =
                                       'Join MoneyMining & earn Gold Rewards! 🏆\n'
                                       'Use my referral code: *${user.referralCode}*\n\n'
-                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.example.money_mining';
+                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.moneymining.in';
                                   Share.share(message, subject: 'MoneyMining Referral Code');
                                 },
                                 icon: const Icon(Icons.share, size: 16),
@@ -288,7 +295,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   final message =
                                       'Join MoneyMining & earn Gold Rewards! 🏆\n'
                                       'Use my referral code: *${user.referralCode}*\n\n'
-                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.example.money_mining';
+                                      '📲 Download the app: https://play.google.com/store/apps/details?id=com.moneymining.in';
                                   Clipboard.setData(ClipboardData(text: message));
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -359,8 +366,10 @@ class _ProfileViewState extends State<ProfileView> {
 
               GradientButton(
                 text: 'Logout from Account',
-                onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(context, Routes.auth, (route) => false);
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  await context.read<StorageService>().clearAuthData();
+                  navigator.pushNamedAndRemoveUntil(Routes.auth, (route) => false);
                 },
                 icon: Icons.logout,
               ),
@@ -384,7 +393,8 @@ class _ProfileViewState extends State<ProfileView> {
               Text('MONEYMINING FINTECH V2.4.0', style: AppTextStyles.bodySmall.copyWith(color: Colors.white24)),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }

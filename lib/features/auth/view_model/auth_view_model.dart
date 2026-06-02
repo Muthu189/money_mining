@@ -213,7 +213,8 @@ class AuthViewModel extends ChangeNotifier {
       if (response.data is Map<String, dynamic>) {
         final data = response.data;
         if (data['login_pin_status'] == 1 && data['login_pin'] != null) {
-          await _storageService.setAppPin(data['login_pin'].toString());
+          final pinStr = data['login_pin'].toString().padLeft(4, '0');
+          await _storageService.setAppPin(pinStr);
         } else {
           await _storageService.removeAppPin();
         }

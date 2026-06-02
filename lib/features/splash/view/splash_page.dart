@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/storage/storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../profile/view_model/profile_view_model.dart';
 import '../../../routes.dart';
 
 class SplashPage extends StatefulWidget {
@@ -45,6 +46,12 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
       if (mounted) {
         if (isLoggedIn) {
+          try {
+            await context.read<ProfileViewModel>().fetchUserInfo();
+          } catch (e) {
+            debugPrint("Splash Page: Failed to fetch user info: $e");
+          }
+
           final isFingerprintEnabled = await storageService.isFingerprintEnabled();
           final appPin = await storageService.getAppPin();
           final hasLockEnabled = isFingerprintEnabled || (appPin != null && appPin.isNotEmpty);

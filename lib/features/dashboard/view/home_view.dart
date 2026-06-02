@@ -22,8 +22,10 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   bool _isBalanceVisible = true;
+  bool _isVaultBalanceVisible = true;
   int _current = 0;
   final CarouselSliderController _controller = CarouselSliderController();
+  bool _isPinPromptShowing = false;
 
   final List<String> _sliderImages = [
     'assets/images/slider1.jpeg',
@@ -37,8 +39,196 @@ class _HomeViewState extends State<HomeView> {
     Future.microtask(() {
       context.read<ProfileViewModel>().fetchUserInfo();
       context.read<TransactionViewModel>().loadInitialData(3);
+      context.read<TransactionViewModel>().loadInitialData(4);
       context.read<KycViewModel>().fetchKycStatus();
     });
+  }
+
+  void _checkAndPromptPin(ProfileViewModel model) {
+    final user = model.user;
+    if (user != null && (user.loginPinStatus == 0 || user.loginPin == null)) {
+      if (!_isPinPromptShowing) {
+        _isPinPromptShowing = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showSetupPinDialog(model);
+        });
+      }
+    }
+  }
+
+  Future<void> _showSetupPinDialog(ProfileViewModel model) async {
+    final pinController = TextEditingController();
+    final confirmController = TextEditingController();
+    
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        String? localError;
+        bool isSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return WillPopScope(
+              onWillPop: () async => false, // Disable physical back button
+              child: AlertDialog(
+                backgroundColor: AppColors.darkGray,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text(
+                  'Set Security PIN',
+                  style: TextStyle(
+                    color: AppColors.luxuryGold,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'To secure your account, please set a 4-digit PIN. You will need to enter this PIN every time you open the app.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: pinController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      obscureText: true,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headlineMedium.copyWith(letterSpacing: 12),
+                      decoration: InputDecoration(
+                        labelText: 'New 4-Digit PIN',
+                        labelStyle: const TextStyle(color: Colors.white54, letterSpacing: 0),
+                        hintText: '••••',
+                        hintStyle: const TextStyle(color: Colors.white24, letterSpacing: 12),
+                        counterText: '',
+                        filled: true,
+                        fillColor: AppColors.matteBlack,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.luxuryGold),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.luxuryGold, width: 2),
+                        ),
+                      ),
+                      onChanged: (_) {
+                        if (localError != null) {
+                          setState(() => localError = null);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: confirmController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      obscureText: true,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headlineMedium.copyWith(letterSpacing: 12),
+                      decoration: InputDecoration(
+                        labelText: 'Confirm PIN',
+                        labelStyle: const TextStyle(color: Colors.white54, letterSpacing: 0),
+                        hintText: '••••',
+                        hintStyle: const TextStyle(color: Colors.white24, letterSpacing: 12),
+                        counterText: '',
+                        filled: true,
+                        fillColor: AppColors.matteBlack,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.luxuryGold),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.luxuryGold, width: 2),
+                        ),
+                      ),
+                      onChanged: (_) {
+                        if (localError != null) {
+                          setState(() => localError = null);
+                        }
+                      },
+                    ),
+                    if (localError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        localError!,
+                        style: const TextStyle(color: AppColors.dangerRed, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  isSaving
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(color: AppColors.luxuryGold),
+                          ),
+                        )
+                      : Container(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final pin = pinController.text.trim();
+                              final confirmPin = confirmController.text.trim();
+
+                              if (pin.length != 4 || confirmPin.length != 4) {
+                                setState(() => localError = 'Please enter a 4-digit PIN.');
+                                return;
+                              }
+
+                              if (pin != confirmPin) {
+                                setState(() => localError = 'PINs do not match.');
+                                return;
+                              }
+
+                              setState(() {
+                                isSaving = true;
+                                localError = null;
+                              });
+
+                              final success = await model.enablePin(pin);
+
+                              if (success) {
+                                if (mounted) {
+                                  Navigator.pop(dialogCtx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(model.successMessage ?? 'PIN set successfully!'),
+                                      backgroundColor: AppColors.successGreen,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                                _isPinPromptShowing = false;
+                              } else {
+                                setState(() {
+                                  isSaving = false;
+                                  localError = model.error ?? 'Failed to set PIN. Please try again.';
+                                });
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.luxuryGold,
+                              foregroundColor: AppColors.matteBlack,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Confirm & Save PIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -78,15 +268,33 @@ class _HomeViewState extends State<HomeView> {
           );
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        _checkAndPromptPin(model);
 
-              _buildHeader(context, user),
-
-              const SizedBox(height: 24),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 8.0),
+              child: _buildHeader(context, user),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.luxuryGold,
+                onRefresh: () async {
+                  await Future.wait([
+                    context.read<ProfileViewModel>().fetchUserInfo(),
+                    context.read<TransactionViewModel>().loadInitialData(3),
+                    context.read<TransactionViewModel>().loadInitialData(4),
+                    context.read<KycViewModel>().fetchKycStatus(),
+                  ]);
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
 
               Column(
                 children: [
@@ -94,7 +302,7 @@ class _HomeViewState extends State<HomeView> {
                     carouselController: _controller,
                     options: CarouselOptions(
                       height: 160,
-                      viewportFraction: 0.92,
+                      viewportFraction: 0.93,
                       enlargeCenterPage: true,
                       autoPlay: true,
                       autoPlayInterval: const Duration(seconds: 4),
@@ -110,7 +318,7 @@ class _HomeViewState extends State<HomeView> {
                         builder: (BuildContext context) {
                           return Container(
                             width: MediaQuery.of(context).size.width,
-                            margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                            margin: const EdgeInsets.symmetric(horizontal: 1.0),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               image: DecorationImage(
@@ -147,17 +355,18 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              _buildBalanceCard(context, user.mainWallet, user.todayRoi),
-
-              const SizedBox(height: 24),
-
-              _buildWalletBox(context, user.wallet),
+                _buildWalletBox(context, user.mainWallet),
 
               const SizedBox(height: 24),
 
-              _buildActionButtons(context),
+              _buildBalanceCard(context, user.wallet, user.todayRoi),
+
+
+
+              const SizedBox(height: 24),
+
 
               const SizedBox(height: 24),
 
@@ -202,9 +411,29 @@ class _HomeViewState extends State<HomeView> {
 
               Consumer<TransactionViewModel>(
                 builder: (context, txModel, child) {
-                  final state = txModel.getCategoryState(3);
+                  final roiState = txModel.getCategoryState(3);
+                  final referState = txModel.getCategoryState(4);
                   
-                  if (state.isLoading && state.transactions.isEmpty) {
+                  final isLoading = roiState.isLoading || referState.isLoading;
+                  
+                  // Combine transactions from Daily ROI (category 3) and Referral Bonus (category 4)
+                  final allTransactions = [
+                    ...roiState.transactions,
+                    ...referState.transactions,
+                  ];
+                  
+                  // Sort by date descending
+                  allTransactions.sort((a, b) {
+                    try {
+                      final dateA = DateTime.parse(a.date);
+                      final dateB = DateTime.parse(b.date);
+                      return dateB.compareTo(dateA);
+                    } catch (_) {
+                      return 0;
+                    }
+                  });
+                  
+                  if (isLoading && allTransactions.isEmpty) {
                     return const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
@@ -213,7 +442,7 @@ class _HomeViewState extends State<HomeView> {
                     );
                   }
 
-                  if (state.transactions.isEmpty) {
+                  if (allTransactions.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -225,10 +454,9 @@ class _HomeViewState extends State<HomeView> {
                     );
                   }
 
-                  // Take only the first 3 transactions for the home view
-                  final count = state.transactions.length > 3 ? 3 : state.transactions.length;
+                  final count = allTransactions.length > 3 ? 3 : allTransactions.length;
                   return Column(
-                    children: state.transactions.take(count).map((tx) {
+                    children: allTransactions.take(count).map((tx) {
                       return _buildTransactionItem(
                         tx.title,
                         tx.status,
@@ -241,9 +469,13 @@ class _HomeViewState extends State<HomeView> {
                 },
               ),
 
-              const SizedBox(height: 80),
-            ],
-          ),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -344,14 +576,16 @@ class _HomeViewState extends State<HomeView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('MINING VAULT BALANCE',
+                    Text('WALLET BALANCE',
                         style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.luxuryGold,
                             fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('Total Asset Value',
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: Colors.white54)),
+                    const Text('Available for Instant Withdraw',
+                        style: TextStyle(color: Colors.white38, fontSize: 10)),
+                    // Text('Total Asset Value',
+                    //     style: AppTextStyles.bodyMedium
+                    //         .copyWith(color: Colors.white54)),
                   ],
                 ),
                 InkWell(
@@ -374,23 +608,46 @@ class _HomeViewState extends State<HomeView> {
                   : '₹ ••••••••',
               style: AppTextStyles.headlineLarge.copyWith(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 6),
 
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.trending_up,
-                    color: AppColors.successGreen, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  '₹ ${todayRoi.toStringAsFixed(2)}',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.successGreen,
-                      fontWeight: FontWeight.bold),
+
+                Row(
+                  children: [
+                    const Icon(Icons.trending_up,
+                        color: AppColors.successGreen, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      '₹ ${todayRoi.toStringAsFixed(2)}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.successGreen,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+
                 ),
+
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, Routes.withdrawal,
+                        arguments: {'type': 'wallet'});
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.luxuryGold,
+                    foregroundColor: AppColors.matteBlack,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: const Text('Withdraw'),
+                  ),
+                ),
+
               ],
             ),
           ],
@@ -412,48 +669,65 @@ class _HomeViewState extends State<HomeView> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.luxuryGold.withOpacity(0.3)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('WALLET BALANCE',
-                  style: TextStyle(
-                      color: AppColors.luxuryGold,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(
-                _isBalanceVisible
-                    ? '₹ ${wallet.toStringAsFixed(2)}'
-                    : '₹ ••••',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('MINING VAULT BALANCE',
+                      style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.luxuryGold,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+
+                ],
               ),
-              const SizedBox(height: 4),
-              const Text('Available for Instant Withdraw',
-                  style: TextStyle(color: Colors.white38, fontSize: 10)),
+              InkWell(
+                onTap: () => setState(() => _isVaultBalanceVisible = !_isVaultBalanceVisible),
+                child: Icon(
+                  _isVaultBalanceVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: AppColors.luxuryGold,
+                  // size: 16,
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: 4),
 
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushNamed(context, Routes.withdrawal,
-                  arguments: {'type': 'wallet'});
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.luxuryGold,
-              foregroundColor: AppColors.matteBlack,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              child: const Text('Withdraw'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Text(
+                    _isVaultBalanceVisible
+                        ? '₹ ${wallet.toStringAsFixed(2)}'
+                        : '₹ ••••',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+
+                ],
+              ),
+
+
+
+            ],
           ),
+          SizedBox(height: 14,),
+          _buildActionButtons(context),
+
         ],
       ),
     );
@@ -481,7 +755,7 @@ class _HomeViewState extends State<HomeView> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildActionButton(
-              label: 'Withdraw Capital',
+              label: 'Move Wallet',
               icon: Icons.logout,
               color: AppColors.darkGray,
               textColor: AppColors.luxuryGold,
@@ -638,7 +912,7 @@ class _HomeViewState extends State<HomeView> {
                 Text(title,
                     style: AppTextStyles.bodyMedium.copyWith(
                         fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(_formatDate(subtitle),
+                Text(_formatDate(subtitle, true),
                     style: AppTextStyles.bodySmall
                         .copyWith(color: Colors.white38)),
               ],
@@ -655,9 +929,12 @@ class _HomeViewState extends State<HomeView> {
   }
 }
 
-String _formatDate(String isoDate) {
+String _formatDate(String isoDate, [bool dateOnly = false]) {
   try {
     final date = DateTime.parse(isoDate).toLocal();
+    if (dateOnly) {
+      return DateFormat('MMM dd, yyyy').format(date);
+    }
     return DateFormat('MMM dd, yyyy • hh:mm a').format(date);
   } catch (e) {
     return isoDate;

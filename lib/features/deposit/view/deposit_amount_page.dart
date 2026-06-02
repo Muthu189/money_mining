@@ -1,11 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
-import '../../../routes.dart';
 import 'package:provider/provider.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../payment/view_model/payment_view_model.dart';
 import '../../profile/view_model/profile_view_model.dart';
 
@@ -19,35 +20,45 @@ class DepositAmountPage extends StatefulWidget {
 class _DepositAmountPageState extends State<DepositAmountPage> {
   int _selectedMethodIndex = 0;
   final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _transactionIdController = TextEditingController();
+  File? _screenshot;
+  final ImagePicker _picker = ImagePicker();
   bool _isSuccess = false;
-  late Razorpay _razorpay;
-
-  // Placeholder key - replace with your actual Razorpay Key ID
-  final String _razorpayKey = 'rzp_test_SE3VsHmaMwY3AE';
 
   final List<Map<String, dynamic>> _methods = [
-    {'name': 'Razorpay (UPI, Cards)', 'icon': Icons.payment},
-    {'name': 'Bank Transfer (NEFT/IMPS)', 'icon': Icons.account_balance},
+    {'name': 'UPI Transfer', 'icon': Icons.qr_code_scanner},
+    {'name': 'Bank Transfer (IMPS)', 'icon': Icons.account_balance},
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-  }
-
-  @override
   void dispose() {
-    _razorpay.clear(); // Removes all listeners
     _amountController.dispose();
+    _transactionIdController.dispose();
     super.dispose();
   }
 
-  void _startRazorpayPayment() {
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _screenshot = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      _showSnackBar('Error picking image: $e', isError: true);
+    }
+  }
+
+  void _copyToClipboard(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    _showSnackBar('$label copied to clipboard');
+  }
+
+  void _submitDepositRequest() async {
     final amountString = _amountController.text.trim();
+    final utrId = _transactionIdController.text.trim();
+
     if (amountString.isEmpty) {
       _showSnackBar('Please enter an amount', isError: true);
       return;
@@ -59,66 +70,34 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
       return;
     }
 
-    // Razorpay amount is in paise (₹1 = 100 paise)
-    final amountInPaise = (amount * 100).toInt();
-    
-    // Get user details for prefill if available
-    final user = context.read<ProfileViewModel>().user;
-
-    var options = {
-      'key': _razorpayKey,
-      'amount': amountInPaise,
-      'name': 'Money Mining',
-      'description': 'Deposit to Mining Vault',
-      'retry': {'enabled': true, 'max_count': 1},
-      'send_sms_hash': true,
-      'prefill': {
-        'contact': user?.mblno ?? '',
-        'email': user?.email ?? ''
-      },
-      'external': {
-        'wallets': ['paytm']
-      }
-    };
-
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      debugPrint('Error opening Razorpay: $e');
-      _showSnackBar('Could not open payment gateway', isError: true);
+    if (utrId.isEmpty) {
+      _showSnackBar('Please enter the UTR / Transaction ID', isError: true);
+      return;
     }
-  }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    // Payment succeeded on Razorpay.
-    // Now call our backend API to create the order and record it.
-    
-    final amountString = _amountController.text.trim();
-    final amount = double.tryParse(amountString) ?? 0.0;
-    final amountInPaise = (amount * 100).toInt(); // API expects paise
-    
+    if (_screenshot == null) {
+      _showSnackBar('Please upload a screenshot of your payment', isError: true);
+      return;
+    }
+
     final viewModel = context.read<PaymentViewModel>();
-    final success = await viewModel.createOrder(amount.toInt());
+
+    final success = await viewModel.createManualDeposit(
+      amount: amount.toInt(),
+      utrId: utrId,
+      screenshot: _screenshot!,
+    );
 
     if (success && mounted) {
       setState(() {
         _isSuccess = true;
       });
-      // Refresh user profile to fetch updated balances
       context.read<ProfileViewModel>().fetchUserInfo();
     } else if (mounted) {
-      _showSnackBar(viewModel.error ?? 'Failed to record payment on server', isError: true);
+      _showSnackBar(viewModel.error ?? 'Failed to submit deposit request', isError: true);
     }
   }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
-    _showSnackBar('Payment failed: ${response.message ?? 'Unknown error'}', isError: true);
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    _showSnackBar('External Wallet Selected: ${response.walletName}');
-  }
-  
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -226,31 +205,155 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
           );
         }),
         
+        const SizedBox(height: 24),
+        _buildPaymentDetails(),
+        
+        const SizedBox(height: 24),
+        const Text(
+          'UTR ID / Transaction ID',
+          style: AppTextStyles.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        CustomTextField(
+          labelText: '',
+          hintText: 'Enter UTR ID or Transaction ID',
+          controller: _transactionIdController,
+        ),
+
+        const SizedBox(height: 24),
+        const Text(
+          'Upload Screenshot',
+          style: AppTextStyles.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.darkGray,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white24, style: BorderStyle.solid),
+            ),
+            child: _screenshot != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(_screenshot!, fit: BoxFit.cover),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.cloud_upload, size: 40, color: AppColors.luxuryGold),
+                      const SizedBox(height: 8),
+                      Text('Tap to upload payment proof', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54)),
+                    ],
+                  ),
+          ),
+        ),
+        
         const SizedBox(height: 40),
         
         GradientButton(
           text: 'PROCEED TO PAYMENT',
-          onPressed: _selectedMethodIndex == 0 ? _startRazorpayPayment : () {
-            _showSnackBar('Bank transfer selected - coming soon', isError: true);
-          },
+          onPressed: _submitDepositRequest,
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildPaymentDetails() {
+    if (_selectedMethodIndex == 0) {
+      // UPI
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.darkGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('UPI ID', style: AppTextStyles.bodySmall.copyWith(color: Colors.white54)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('MONEYMINING@KVB', style: AppTextStyles.titleMedium),
+                IconButton(
+                  icon: const Icon(Icons.copy, color: AppColors.luxuryGold, size: 20),
+                  onPressed: () => _copyToClipboard('MONEYMINING@KVB', 'UPI ID'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // IMPS Placeholder Details
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.darkGray,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCopyableDetailRow('Account Number', '1966135000000242'),
+            const Divider(color: Colors.white10, height: 24),
+            _buildCopyableDetailRow('Beneficiary Name', 'MONEY MINING'),
+            const Divider(color: Colors.white10, height: 24),
+            _buildCopyableDetailRow('Bank Name', 'Karur Vysya Bank'),
+            const Divider(color: Colors.white10, height: 24),
+            _buildCopyableDetailRow('IFSC Code', 'KVBL0001966'),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildCopyableDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: AppTextStyles.bodySmall.copyWith(color: Colors.white54)),
+            const SizedBox(height: 4),
+            Text(value, style: AppTextStyles.bodyLarge),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.copy, color: AppColors.luxuryGold, size: 20),
+          onPressed: () => _copyToClipboard(value, label),
         ),
       ],
     );
   }
 
   Widget _buildSuccessInvoice(PaymentViewModel viewModel) {
-    final order = viewModel.order;
+    final orderId = viewModel.lastOrder?.orderId ?? '';
+    final serverMessage = viewModel.lastOrder?.message ?? 'Your deposit request is under review.';
     return Column(
       children: [
         const SizedBox(height: 20),
         const Icon(Icons.check_circle, color: AppColors.successGreen, size: 80),
         const SizedBox(height: 24),
-        const Text('Deposit Successful!', style: AppTextStyles.headlineMedium),
+        const Text('Deposit Request Submitted!', style: AppTextStyles.headlineMedium, textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text('Your funds have been added to your vault.', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54)),
-        
+        Text(
+          serverMessage,
+          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white54),
+          textAlign: TextAlign.center,
+        ),
+
         const SizedBox(height: 40),
-        
+
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -260,22 +363,24 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
           ),
           child: Column(
             children: [
-              if (order != null) ...[
-                _buildInvoiceRow('Order ID', order.id),
+              if (orderId.isNotEmpty) ...[
+                _buildInvoiceRow('Order ID', orderId),
                 const Divider(color: Colors.white12, height: 32),
               ],
-              _buildInvoiceRow('Payment Method', 'Razorpay'),
+              _buildInvoiceRow('UTR ID', _transactionIdController.text),
+              const Divider(color: Colors.white12, height: 32),
+              _buildInvoiceRow('Payment Method', _methods[_selectedMethodIndex]['name']),
               const Divider(color: Colors.white12, height: 32),
               _buildInvoiceRow('Amount Deposited', '₹ ${_amountController.text}', isBold: true),
             ],
           ),
         ),
-        
+
         const SizedBox(height: 40),
-        
+
         GradientButton(
           text: 'GO TO DASHBOARD',
-          onPressed: () => Navigator.pop(context), // Back to Home
+          onPressed: () => Navigator.pop(context),
         ),
       ],
     );

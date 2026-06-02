@@ -54,7 +54,16 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _buildBody(viewModel),
+      body: RefreshIndicator(
+        color: AppColors.luxuryGold,
+        onRefresh: () async {
+          await Future.wait([
+            viewModel.fetchKycStatus(),
+            viewModel.fetchBankList(),
+          ]);
+        },
+        child: _buildBody(viewModel),
+      ),
     );
   }
 
@@ -102,6 +111,7 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
     final needsResubmit = detail.hasAnyRejection;
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,6 +527,7 @@ class _KycVerificationPageState extends State<KycVerificationPage> {
   // ─────────────────────────────────────────
   Widget _buildFullForm(KycViewModel viewModel) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

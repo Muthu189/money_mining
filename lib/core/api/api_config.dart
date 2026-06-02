@@ -23,10 +23,12 @@ class ApiConfig {
 
   // Payment
   static const String createOrder = '/payments/createOrder';
+  static const String userDepositList = '/users/userDepositList';
 
   // Withdrawal
   static const String requestMoveWalletAmount = '/users/requestMoveWalletAmount';
   static const String userWithdrawRequest = '/users/userWithdrawRequest';
+  static const String userWithdrawList = '/users/userWithdrawList';
 
   // Transaction History
   static const String transactionHistory = '/users/transactionHistory';

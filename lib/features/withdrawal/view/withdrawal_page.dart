@@ -6,6 +6,8 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
 import 'package:provider/provider.dart';
 import '../../profile/view_model/profile_view_model.dart';
+import '../../kyc/view_model/kyc_view_model.dart';
+import '../../kyc/data/kyc_detail_model.dart';
 import '../view_model/withdrawal_view_model.dart';
 
 
@@ -22,16 +24,15 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   bool _isWalletWithdraw = false;
   bool _isSubmitted = false;
   
-  final List<String> _bankAccounts = [
-    'Goldman Sachs Premium •••• 8824',
-    'Chase Sapphire Checking •••• 4290',
-    'HDFC Bank Priority •••• 1122',
-  ];
+  
+  List<String> _bankAccounts = [];
 
   @override
   void initState() {
     super.initState();
-    _selectedBank = _bankAccounts[0];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<KycViewModel>().fetchKycStatus();
+    });
   }
 
   @override
@@ -117,9 +118,19 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           builder: (context, viewModel, child) {
             return Stack(
               children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: _isSubmitted ? _buildSuccessView(viewModel) : _buildWithdrawForm(),
+                RefreshIndicator(
+                  color: AppColors.luxuryGold,
+                  onRefresh: () async {
+                    await Future.wait([
+                      context.read<KycViewModel>().fetchKycStatus(),
+                      context.read<ProfileViewModel>().fetchUserInfo(),
+                    ]);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(24.0),
+                    child: _isSubmitted ? _buildSuccessView(viewModel) : _buildWithdrawForm(),
+                  ),
                 ),
                 if (viewModel.isLoading)
                   Container(
@@ -138,9 +149,27 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
   Widget _buildWithdrawForm() {
     final user = context.watch<ProfileViewModel>().user;
+    final kycViewModel = context.watch<KycViewModel>();
+    final kycDetail = kycViewModel.kycDetail;
+
     final balance = user != null 
         ? (_isWalletWithdraw ? user.wallet : user.mainWallet)
         : 0.0;
+
+    // Build dynamic bank list
+    _bankAccounts = [];
+    if (kycDetail != null && kycDetail.hasBankData) {
+      final last4 = kycDetail.accNo!.length > 4 
+          ? kycDetail.accNo!.substring(kycDetail.accNo!.length - 4) 
+          : kycDetail.accNo;
+      _bankAccounts.add('${kycDetail.bankName} •••• $last4');
+    }
+
+    if (_bankAccounts.isNotEmpty && (_selectedBank == null || !_bankAccounts.contains(_selectedBank))) {
+       _selectedBank = _bankAccounts[0];
+    }
+
+    final bool canProceed = _bankAccounts.isNotEmpty && balance > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,34 +287,38 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               ),
               child: const Icon(Icons.account_balance, color: AppColors.luxuryGold),
             ),
-            title: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedBank,
-                dropdownColor: AppColors.darkGray,
-                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
-                isExpanded: true,
-                style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedBank = newValue;
-                  });
-                },
-                items: _bankAccounts.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-            ),
-            subtitle: const Text('•••• 8824', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            title: kycViewModel.isLoading 
+              ? const Text('Loading bank details...', style: TextStyle(color: Colors.white54, fontSize: 14))
+              : _bankAccounts.isEmpty 
+                ? const Text('No verified bank account found', style: TextStyle(color: Colors.redAccent, fontSize: 14))
+                : DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedBank,
+                      dropdownColor: AppColors.darkGray,
+                      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+                      isExpanded: true,
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedBank = newValue;
+                        });
+                      },
+                      items: _bankAccounts.map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+            subtitle: _bankAccounts.isEmpty ? null : Text(_selectedBank?.split('••••').last ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
           ),
         ),
         
         const SizedBox(height: 40),
         GradientButton(
           text: _isWalletWithdraw ? 'WITHDRAW NOW' : 'SUBMIT REQUEST',
-          onPressed: _submitWithdrawal,
+          onPressed: canProceed ? _submitWithdrawal : null,
         ),
       ],
     );

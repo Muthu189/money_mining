@@ -9,7 +9,7 @@ class ReferralPage extends StatelessWidget {
   final String referralCode;
   const ReferralPage({super.key, this.referralCode = 'MINER777'});
 
-  static const String _playStorePackage = 'com.example.money_mining';
+  static const String _playStorePackage = 'com.moneymining.in';
   static const String _playStoreUrl =
       'https://play.google.com/store/apps/details?id=$_playStorePackage';
 

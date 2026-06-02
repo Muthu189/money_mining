@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/storage/storage_service.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../../routes.dart';
@@ -75,11 +76,26 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         );
       }
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        Routes.dashboard,
-            (route) => false,
-      );
+      final storageService = context.read<StorageService>();
+      final isFingerprintEnabled = await storageService.isFingerprintEnabled();
+      final appPin = await storageService.getAppPin();
+      final hasLockEnabled = isFingerprintEnabled || (appPin != null && appPin.isNotEmpty);
+
+      if (!mounted) return;
+
+      if (hasLockEnabled) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          Routes.appLock,
+          (route) => false,
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          Routes.dashboard,
+          (route) => false,
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

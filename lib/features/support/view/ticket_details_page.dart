@@ -106,15 +106,20 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
           return Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  itemCount: viewModel.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = viewModel.messages[index];
-                    final isUser = message.sender.toLowerCase() == 'user';
-                    return _buildMessageBubble(message, isUser);
-                  },
+                child: RefreshIndicator(
+                  color: AppColors.luxuryGold,
+                  onRefresh: () => viewModel.loadTicketDetails(widget.ticketId),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    itemCount: viewModel.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = viewModel.messages[index];
+                      final isUser = message.sender.toLowerCase() == 'user';
+                      return _buildMessageBubble(message, isUser);
+                    },
+                  ),
                 ),
               ),
               _buildMessageInput(viewModel),
