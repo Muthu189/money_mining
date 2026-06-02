@@ -1,13 +1,12 @@
+import 'dart:io';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
-import '../../../routes.dart';
 import 'package:provider/provider.dart';
 import '../../profile/view_model/profile_view_model.dart';
 import '../../kyc/view_model/kyc_view_model.dart';
-import '../../kyc/data/kyc_detail_model.dart';
 import '../view_model/withdrawal_view_model.dart';
 
 
@@ -33,7 +32,36 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<KycViewModel>().fetchKycStatus();
     });
+    _enableSecureScreen();
   }
+
+  Future<void> _enableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to set secure flag: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _disableSecureScreen();
+    super.dispose();
+  }
+
+  Future<void> _disableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to clear secure flag: $e');
+    }
+  }
+
+
 
   @override
   void didChangeDependencies() {

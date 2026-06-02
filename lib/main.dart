@@ -87,14 +87,85 @@ class MoneyMiningApp extends StatelessWidget {
           update: (_, supportRepository, viewModel) => SupportViewModel(supportRepository),
         ),
       ],
-      child: MaterialApp(
-        title: 'MoneyMining',
-        navigatorKey: Routes.navigatorKey,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        initialRoute: Routes.splash,
-        routes: Routes.getRoutes(context),
+      child: AppLifecycleLockObserver(
+        child: MaterialApp(
+          title: 'MoneyMining',
+          navigatorKey: Routes.navigatorKey,
+          navigatorObservers: [AppRouteObserver()],
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.darkTheme,
+          initialRoute: Routes.splash,
+          routes: Routes.getRoutes(context),
+        ),
       ),
     );
   }
 }
+
+class AppLifecycleLockObserver extends StatefulWidget {
+  final Widget child;
+  const AppLifecycleLockObserver({super.key, required this.child});
+
+  @override
+  State<AppLifecycleLockObserver> createState() => _AppLifecycleLockObserverState();
+}
+
+class _AppLifecycleLockObserverState extends State<AppLifecycleLockObserver> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _lockApp();
+    }
+  }
+
+  Future<void> _lockApp() async {
+    final storageService = context.read<StorageService>();
+    final isLoggedIn = await storageService.isLoggedIn();
+    if (!isLoggedIn) return;
+
+    final isFingerprintEnabled = await storageService.isFingerprintEnabled();
+    final appPin = await storageService.getAppPin();
+    final hasLockEnabled = isFingerprintEnabled || (appPin != null && appPin.isNotEmpty);
+
+    if (hasLockEnabled) {
+      final current = AppRouteObserver.currentRoute;
+      if (current != null &&
+          current != Routes.appLock &&
+          current != Routes.splash &&
+          current != Routes.auth &&
+          current != Routes.onboarding &&
+          current != Routes.forgotPassword &&
+          current != Routes.otpVerification &&
+          current != Routes.createPin) {
+        Routes.navigatorKey.currentState?.pushNamed(Routes.appLock);
+      }
+    } else {
+      final current = AppRouteObserver.currentRoute;
+      if (current != null &&
+          current != Routes.splash &&
+          current != Routes.auth &&
+          current != Routes.onboarding &&
+          current != Routes.forgotPassword &&
+          current != Routes.otpVerification &&
+          current != Routes.createPin) {
+        Routes.navigatorKey.currentState?.pushNamedAndRemoveUntil(Routes.createPin, (route) => false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+

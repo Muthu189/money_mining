@@ -59,8 +59,9 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
           if (hasLockEnabled) {
              Navigator.pushReplacementNamed(context, Routes.appLock);
           } else {
-             Navigator.pushReplacementNamed(context, Routes.dashboard);
+             Navigator.pushReplacementNamed(context, Routes.createPin);
           }
+
         } else if (isOnboardingComplete) {
           Navigator.pushReplacementNamed(context, Routes.auth);
         } else {

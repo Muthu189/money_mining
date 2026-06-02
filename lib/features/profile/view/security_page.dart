@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
+import '../../../core/storage/storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/gradient_button.dart';
 import '../../profile/view_model/profile_view_model.dart';
+import '../../auth/view/create_pin_page.dart';
 
 class SecurityPage extends StatefulWidget {
   const SecurityPage({super.key});
@@ -18,7 +21,35 @@ class _SecurityPageState extends State<SecurityPage> {
     super.initState();
     // Ensure user info is loaded (for PIN status)
     Future.microtask(() => context.read<ProfileViewModel>().fetchUserInfo());
+    _enableSecureScreen();
   }
+
+  Future<void> _enableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to set secure flag: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _disableSecureScreen();
+    super.dispose();
+  }
+
+  Future<void> _disableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to clear secure flag: $e');
+    }
+  }
+
 
   void _showSnack(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -71,7 +102,7 @@ class _SecurityPageState extends State<SecurityPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, null),
-            child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -143,6 +174,20 @@ class _SecurityPageState extends State<SecurityPage> {
                                 isFingerprintEnabled,
                                 profileVM.canCheckBiometrics
                                     ? (value) async {
+                                        if (!value) {
+                                          final pin = await _showPinDialog(
+                                            title: 'Disable Fingerprint',
+                                            subtitle: 'Enter your PIN to disable fingerprint login',
+                                          );
+                                          if (pin == null) return;
+                                          final localPin = await context.read<StorageService>().getAppPin();
+                                          if (pin != localPin) {
+                                            if (mounted) {
+                                              _showSnack('Incorrect PIN. Cannot disable fingerprint.', isError: true);
+                                            }
+                                            return;
+                                          }
+                                        }
                                         final success = await profileVM.toggleFingerprint(value);
                                         if (mounted) {
                                           _showSnack(
@@ -176,25 +221,17 @@ class _SecurityPageState extends State<SecurityPage> {
                               _buildToggleItem(
                                 Icons.password,
                                 'Transaction PIN',
-                                isPinEnabled ? 'PIN is active' : 'Set a 4-digit PIN',
+                                isPinEnabled ? 'PIN is active' : 'Set a 4 or 6-digit PIN',
                                 isPinEnabled,
                                 (value) async {
                                   if (value) {
-                                    // Enable PIN → ask user to set a PIN
-                                    final pin = await _showPinDialog(
-                                      title: 'Set PIN',
-                                      subtitle: 'Enter a 4-digit PIN to secure your account',
+                                    // Navigate to CreatePinPage to configure PIN
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const CreatePinPage(isReset: true),
+                                      ),
                                     );
-                                    if (pin == null) return;
-                                    final success = await profileVM.enablePin(pin);
-                                    if (mounted) {
-                                      _showSnack(
-                                        success
-                                            ? (profileVM.successMessage ?? 'PIN enabled')
-                                            : (profileVM.error ?? 'Failed'),
-                                        isError: !success,
-                                      );
-                                    }
                                   } else {
                                     // Disable PIN → ask user to enter current PIN
                                     final pin = await _showPinDialog(
@@ -223,24 +260,16 @@ class _SecurityPageState extends State<SecurityPage> {
                                   child: const Icon(Icons.pin, color: AppColors.luxuryGold, size: 20),
                                 ),
                                 title: const Text('Change Security PIN', style: AppTextStyles.bodyMedium),
-                                subtitle: const Text('Update your 4-digit access code', style: AppTextStyles.bodySmall),
+                                subtitle: const Text('Update your access code', style: AppTextStyles.bodySmall),
                                 trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.luxuryGold),
                                 onTap: isPinEnabled
-                                    ? () async {
-                                        final pin = await _showPinDialog(
-                                          title: 'Change PIN',
-                                          subtitle: 'Enter a new 4-digit PIN',
+                                    ? () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const CreatePinPage(isReset: true),
+                                          ),
                                         );
-                                        if (pin == null) return;
-                                        final success = await profileVM.enablePin(pin);
-                                        if (mounted) {
-                                          _showSnack(
-                                            success
-                                                ? (profileVM.successMessage ?? 'PIN updated')
-                                                : (profileVM.error ?? 'Failed'),
-                                            isError: !success,
-                                          );
-                                        }
                                       }
                                     : () {
                                         _showSnack('Please enable PIN first', isError: true);
@@ -249,6 +278,7 @@ class _SecurityPageState extends State<SecurityPage> {
                             ],
                           ),
                         ),
+
                       ],
                     ),
                   ),

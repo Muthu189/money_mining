@@ -17,6 +17,7 @@ import 'features/referral/view/referral_page.dart';
 import 'features/profile/view/security_page.dart';
 import 'features/profile/view/change_password_page.dart';
 import 'features/legal/view/terms_conditions_page.dart';
+import 'features/auth/view/create_pin_page.dart';
 import 'features/auth/view/otp_verification_page.dart';
 import 'features/splash/view/maintenance_page.dart';
 import 'features/auth/view/app_lock_page.dart';
@@ -46,6 +47,7 @@ class Routes {
   static const String privacyPolicy = '/privacy_policy';
   static const String maintenance = '/maintenance';
   static const String appLock = '/app_lock';
+  static const String createPin = '/create_pin';
 
   static Map<String, WidgetBuilder> getRoutes(BuildContext context) {
     return {
@@ -71,6 +73,35 @@ class Routes {
       otpVerification: (context) => const OtpVerificationPage(),
       maintenance: (context) => const MaintenancePage(),
       appLock: (context) => const AppLockPage(),
+      createPin: (context) => const CreatePinPage(),
     };
+  }
+}
+
+class AppRouteObserver extends NavigatorObserver {
+  static String? currentRoute;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route.settings.name != null) {
+      currentRoute = route.settings.name;
+    }
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute?.settings.name != null) {
+      currentRoute = previousRoute?.settings.name;
+    }
+    super.didPop(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (newRoute?.settings.name != null) {
+      currentRoute = newRoute?.settings.name;
+    }
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 }

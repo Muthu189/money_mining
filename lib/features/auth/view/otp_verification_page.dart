@@ -15,7 +15,7 @@ class OtpVerificationPage extends StatefulWidget {
 }
 
 class _OtpVerificationPageState extends State<OtpVerificationPage> {
-  static const int otpLength = 6;
+  static const int otpLength = 4;
 
   final List<TextEditingController> _controllers =
   List.generate(otpLength, (_) => TextEditingController());
@@ -55,7 +55,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     if (otp.length != otpLength) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid 6-digit OTP'),
+          content: Text('Please enter a valid 4-digit OTP'),
         ),
       );
       return;
@@ -92,10 +92,11 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       } else {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          Routes.dashboard,
+          Routes.createPin,
           (route) => false,
         );
       }
+
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -168,7 +169,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
             const SizedBox(height: 16),
 
             Text(
-              'We sent a 6-digit code to your email/phone.',
+              'We sent a 4-digit code to your phone.',
               style: AppTextStyles.bodyMedium
                   .copyWith(color: Colors.white54),
               textAlign: TextAlign.center,

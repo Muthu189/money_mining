@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -20,6 +22,40 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _enableSecureScreen();
+  }
+
+  Future<void> _enableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to set secure flag: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _disableSecureScreen();
+    super.dispose();
+  }
+
+  Future<void> _disableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to clear secure flag: $e');
+    }
+  }
+
+
 
   void _switchTab(int index) {
     setState(() {

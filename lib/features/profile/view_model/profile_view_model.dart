@@ -168,6 +168,7 @@ class ProfileViewModel extends ChangeNotifier {
       final response = await _profileRepository.updatePin(type: 2, pin: pin);
       _successMessage = response.message.isNotEmpty ? response.message : 'PIN disabled successfully';
       await _storageService.removeAppPin(); // Remove locally for app lock
+      await _storageService.setFingerprintEnabled(false); // Disable fingerprint since PIN is disabled
       await fetchUserInfo(); // Refresh
       return true;
     } on ApiException catch (e) {

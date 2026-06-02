@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class StorageService {
   static const String _keyJToken = 'jToken';
@@ -7,6 +8,8 @@ class StorageService {
   static const String _keyIsOnboardingComplete = 'isOnboardingComplete';
   static const String _keyFingerprintEnabled = 'fingerprintEnabled';
   static const String _keyAppPin = 'appPin';
+
+  final _secureStorage = const FlutterSecureStorage();
 
   Future<void> saveAuthData(String jToken, String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -46,7 +49,7 @@ class StorageService {
     await prefs.remove(_keyToken);
     await prefs.remove(_keyIsLoggedIn);
     // Also clear PIN/fingerprint on logout to be safe
-    await prefs.remove(_keyAppPin);
+    await _secureStorage.delete(key: _keyAppPin);
     await prefs.remove(_keyFingerprintEnabled);
   }
 
@@ -63,17 +66,15 @@ class StorageService {
 
   // App PIN storage
   Future<void> setAppPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyAppPin, pin);
+    await _secureStorage.write(key: _keyAppPin, value: pin);
   }
 
   Future<String?> getAppPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyAppPin);
+    return await _secureStorage.read(key: _keyAppPin);
   }
 
   Future<void> removeAppPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyAppPin);
+    await _secureStorage.delete(key: _keyAppPin);
   }
 }
+

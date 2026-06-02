@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/custom_text_field.dart';
@@ -31,11 +32,40 @@ class _DepositAmountPageState extends State<DepositAmountPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _enableSecureScreen();
+  }
+
+  Future<void> _enableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to set secure flag: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _transactionIdController.dispose();
+    _disableSecureScreen();
     super.dispose();
   }
+
+  Future<void> _disableSecureScreen() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e) {
+      debugPrint('Failed to clear secure flag: $e');
+    }
+  }
+
+
 
   Future<void> _pickImage() async {
     try {
