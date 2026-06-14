@@ -8,6 +8,7 @@ class StorageService {
   static const String _keyIsOnboardingComplete = 'isOnboardingComplete';
   static const String _keyFingerprintEnabled = 'fingerprintEnabled';
   static const String _keyAppPin = 'appPin';
+  static const String _keyTermsAccepted = 'termsAccepted';
 
   final _secureStorage = const FlutterSecureStorage();
 
@@ -48,9 +49,7 @@ class StorageService {
     await prefs.remove(_keyJToken);
     await prefs.remove(_keyToken);
     await prefs.remove(_keyIsLoggedIn);
-    // Also clear PIN/fingerprint on logout to be safe
-    await _secureStorage.delete(key: _keyAppPin);
-    await prefs.remove(_keyFingerprintEnabled);
+    // PIN and fingerprint settings are retained across logout sessions
   }
 
   // Fingerprint preference
@@ -62,6 +61,17 @@ class StorageService {
   Future<bool> isFingerprintEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyFingerprintEnabled) ?? false;
+  }
+
+  // Terms and conditions acceptance preference
+  Future<void> setTermsAccepted(bool accepted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyTermsAccepted, accepted);
+  }
+
+  Future<bool> isTermsAccepted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyTermsAccepted) ?? false;
   }
 
   // App PIN storage

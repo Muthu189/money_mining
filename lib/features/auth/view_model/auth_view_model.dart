@@ -216,7 +216,11 @@ class AuthViewModel extends ChangeNotifier {
           final pinStr = data['login_pin'].toString().padLeft(4, '0');
           await _storageService.setAppPin(pinStr);
         } else {
-          await _storageService.removeAppPin();
+          // Retain local PIN if already set, allowing PIN reuse for multiple/new accounts.
+          final localPin = await _storageService.getAppPin();
+          if (localPin == null || localPin.isEmpty) {
+            await _storageService.removeAppPin();
+          }
         }
       }
 

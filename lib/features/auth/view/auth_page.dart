@@ -6,6 +6,7 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../routes.dart';
 import '../view_model/auth_view_model.dart'; // Import ViewModel
+import '../../../core/storage/storage_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -36,6 +37,22 @@ class _AuthPageState extends State<AuthPage> {
   bool _showEmailOtp = false; // Not used in API flow yet based on payload
   bool _showPhoneOtp = false; // Not used in API flow yet
   bool _isTermsAccepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTermsAccepted();
+  }
+
+  Future<void> _loadTermsAccepted() async {
+    final storage = context.read<StorageService>();
+    final accepted = await storage.isTermsAccepted();
+    if (mounted) {
+      setState(() {
+        _isTermsAccepted = accepted;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -530,7 +547,10 @@ class _AuthPageState extends State<AuthPage> {
               activeColor: AppColors.luxuryGold,
               checkColor: AppColors.matteBlack,
               side: const BorderSide(color: Colors.white54),
-              onChanged: (val) => setState(() => _isTermsAccepted = val ?? false),
+              onChanged: (val) async {
+                setState(() => _isTermsAccepted = val ?? false);
+                await context.read<StorageService>().setTermsAccepted(val ?? false);
+              },
             ),
             Expanded(
               child: Text(

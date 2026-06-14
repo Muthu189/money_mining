@@ -3,6 +3,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../routes.dart';
+import 'package:provider/provider.dart';
+import '../../../core/storage/storage_service.dart';
 
 class TermsConditionsPage extends StatefulWidget {
   const TermsConditionsPage({super.key});
@@ -13,6 +15,22 @@ class TermsConditionsPage extends StatefulWidget {
 
 class _TermsConditionsPageState extends State<TermsConditionsPage> {
   bool _accepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccepted();
+  }
+
+  Future<void> _loadAccepted() async {
+    final storage = context.read<StorageService>();
+    final accepted = await storage.isTermsAccepted();
+    if (mounted) {
+      setState(() {
+        _accepted = accepted;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +96,10 @@ class _TermsConditionsPageState extends State<TermsConditionsPage> {
                     children: [
                       Checkbox(
                         value: _accepted, 
-                        onChanged: (v) => setState(() => _accepted = v!),
+                        onChanged: (v) async {
+                          setState(() => _accepted = v!);
+                          await context.read<StorageService>().setTermsAccepted(v!);
+                        },
                         activeColor: AppColors.luxuryGold,
                         side: const BorderSide(color: Colors.white54),
                       ),
